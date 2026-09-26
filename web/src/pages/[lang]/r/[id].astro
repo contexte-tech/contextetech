@@ -1,0 +1,327 @@
+---
+import { contentLang, kindPath, listPath, pre, profilePath, resourcePath, tagPath } from "../../../lib/paths.js";
+import Base from "../../../layouts/Base.astro";
+import LikeButton from "../../../components/LikeButton.svelte";
+import ExportButtons from "../../../components/ExportButtons.svelte";
+import DeleteButton from "../../../components/DeleteButton.svelte";
+import Playground from "../../../components/Playground.svelte";
+import Breadcrumb from "../../../components/Breadcrumb.astro";
+import { AGENT_FRAMEWORKS, HARNESSES, KCOLOR, riskOf, VECTOR_STORES, MODEL_FAMILIES, TARGET_KINDS, mcpConfig, subOf, targetName, author, datasetPairs, exportOf, fullId, licName, snippetsOf, subLabel, varsOf } from "../../../lib/format.js";
+import { LANGS, ago, clangName, dict, fmtNum, isLang, translator } from "../../../lib/i18n.js";
+import { api, cachePublic, site, b64 } from "../../../lib/server.js";
+
+const { lang, id } = Astro.params;
+if (!isLang(lang)) return Astro.rewrite("/404");
+const S = site();
+const t = translator(lang, S.name);
+
+// Adresse /<type>/<nom>-<court> : la fiche est retrouvée par type, nom et identifiant court ; /r/<id> (usage interne) par identifiant
+const it = await api(Astro, Astro.locals.byName
+  ? `/api/resources/by-slug/${Astro.locals.detailKind}/${encodeURIComponent(decodeURIComponent(id))}`
+  : `/api/resources/${encodeURIComponent(id)}`);
+if (!it) return Astro.rewrite("/404");
+// Trouvée par type et nom : servie directement. Seul l'ancien /r/<id> (usage interne) renvoie vers /<type>/<nom>.
+if (!Astro.locals.byName) return Astro.redirect(resourcePath(lang, it.kind, it.id) + Astro.url.search, 301);
+const [user, cfg, comments] = await Promise.all([
+  api(Astro, "/api/auth/me"),
+  api(Astro, "/api/config"),
+  api(Astro, `/api/resources/${encodeURIComponent(it.id)}/comments`),
+]);
+// Modèle cible : lien vers la fiche du modèle publié, s'il existe
+const targetRes = it.targetModelId ? await api(Astro, `/api/resources/${encodeURIComponent(it.targetModelId)}`).catch(() => null) : null;
+// Agent : serveurs MCP et contextes branchés ; évaluation : ressource évaluée
+const agentLinks = it.kind === "agent" || it.kind === "harness"
+  ? (await Promise.all([...(it.mcpIds || []), ...(it.contextIds || [])].map((x) => api(Astro, `/api/resources/${encodeURIComponent(x)}`).catch(() => null)))).filter(Boolean) : [];
+const evalTarget = it.kind === "eval" && it.evaluatesId ? await api(Astro, `/api/resources/${encodeURIComponent(it.evaluatesId)}`).catch(() => null) : null;
+// Modèle : datasets et config LoRA d'entraînement liés
+const linked = it.kind === "model"
+  ? (await Promise.all([...(it.datasetIds || []), it.loraId].filter(Boolean).map((x) => api(Astro, `/api/resources/${encodeURIComponent(x)}`).catch(() => null)))).filter(Boolean)
+  : [];
+const ds = it.kind === "lora" && it.datasetId ? await api(Astro, `/api/resources/${encodeURIComponent(it.datasetId)}`) : null;
+cachePublic(Astro, 60);
+
+// Le bac à sable coûte des appels au modèle : réservé à l'administrateur
+const playable = !["lora", "tool", "model", "agent", "skill", "eval", "rag", "harness"].includes(it.kind) && !!user.isAdmin;
+let tab = Astro.url.searchParams.get("tab") || "card";
+if (!["card", "play", "use", "community"].includes(tab) || (tab === "play" && !playable)) tab = "card";
+const base = resourcePath(lang, it.kind, it.id);
+const mine = !!user.authenticated && (user.id === it.authorId || user.isAdmin);
+const ex = exportOf(it, ds);
+const pairs = it.kind === "dataset" ? datasetPairs(it).slice(0, 20) : [];
+
+const stats = it.kind === "context" ? [[t("s_instruction"), it.system ? `${it.system.length} ${t("chars")}` : "—"], [t("s_examples"), (it.examples || []).length], [t("s_knowledge"), it.knowledge ? `${it.knowledge.length} ${t("chars")}` : "—"], [t("s_tokens"), fmtNum(lang, Math.round(ex.text.length / 3.6))]]
+  : it.kind === "prompt" ? [[t("s_vars"), varsOf(it.template).length], [t("s_length"), `${(it.template || "").length} ${t("chars")}`]]
+  : it.kind === "dataset" ? [[t("s_format"), subLabel(t, it)], [t("s_rows"), fmtNum(lang, it.rowCount)]]
+  : it.kind === "rag" ? [[t("rg_store"), VECTOR_STORES[it.vectorStore]?.startsWith("fam_") ? t(VECTOR_STORES[it.vectorStore]) : VECTOR_STORES[it.vectorStore]], [t("rg_emb"), it.embedding], [t("rg_chunk"), it.chunkSize], [t("rg_topk"), it.topK]]
+  : it.kind === "harness" ? [["Harness", HARNESSES[it.harness]?.startsWith("fam_") ? t(HARNESSES[it.harness]) : HARNESSES[it.harness]], [t("hn_allow"), (it.allow || []).length], [t("hn_deny"), (it.deny || []).length], [t("ag_mcp"), (it.mcpIds || []).length]]
+  : it.kind === "agent" ? [[t("ag_fw"), AGENT_FRAMEWORKS[it.framework]?.startsWith("fam_") ? t(AGENT_FRAMEWORKS[it.framework]) : AGENT_FRAMEWORKS[it.framework] || "—"], [t("ag_steps"), (it.steps || []).length], [t("ag_mcp"), (it.mcpIds || []).length]]
+  : it.kind === "skill" ? [[t("sk_name"), it.skillName], [t("s_length"), `${(it.instructions || "").length} ${t("chars")}`]]
+  : it.kind === "eval" ? [[t("ev_cases"), (it.cases || []).length], [t("ev_metric"), t("evm_" + (it.metric || "contains").replace("-", "_"))], [t("ev_thr"), `${it.threshold} %`]]
+  : it.kind === "model" ? [[t("f_modeltype"), subLabel(t, it)], [t("s_family"), MODEL_FAMILIES[it.family]?.startsWith("fam_") ? t(MODEL_FAMILIES[it.family]) : MODEL_FAMILIES[it.family] || "—"],
+      [t("s_mparams"), it.params || "—"], [t("s_mformat"), (it.format || "").toUpperCase()], [t("s_ctx"), it.contextLength ? fmtNum(lang, it.contextLength) : "—"]]
+  : it.kind === "tool" ? (it.toolType === "mcp"
+    ? [[t("f_tooltype"), subLabel(t, it)], [t("s_toolname"), it.toolName], [t("s_transport"), it.transport]]
+    : [[t("f_tooltype"), subLabel(t, it)], [t("s_toolname"), it.toolName], [t("s_params"), Object.keys(it.schema?.properties || {}).length]])
+  : [[t("s_method"), subLabel(t, it)], [t("s_rank"), it.r], [t("s_alpha"), it.alpha], [t("s_epochs"), it.epochs]];
+
+// Version et niveau de risque dans l'encadré latéral
+if (it.kind !== "model" && it.version) stats.push([t("mg_version"), it.version]);
+if (it.kind === "tool" || it.kind === "harness") stats.push([t("rk_title"), t("rk_" + riskOf(it.access))]);
+if (it.kind !== "model" && (it.tests || []).length) stats.push([t("ts_title"), `${it.tests.filter((x) => x.result === "pass").length}/${it.tests.length} ${t("tr_pass").toLowerCase()}`]);
+const kindLabel0 = t("k_" + it.kind);
+const mainLd = {
+  "@type": it.kind === "dataset" ? "Dataset" : it.kind === "lora" || it.kind === "model" ? "SoftwareSourceCode" : "CreativeWork",
+  name: fullId(it), description: it.description || undefined, url: `${S.origin}${base}`,
+  inLanguage: it.clang && it.clang !== "multi" ? it.clang : undefined,
+  keywords: (it.tags || []).join(", ") || undefined,
+  isBasedOn: it.sourceUrl || undefined,
+  license: it.license && it.license !== "proprietary" ? `https://spdx.org/licenses/${it.license}.html` : undefined,
+  author: { "@type": "Person", name: author(it) },
+  dateModified: new Date(it.updatedAt).toISOString(), datePublished: new Date(it.createdAt).toISOString(),
+};
+// Fil d'Ariane : visible en microdata (composant Breadcrumb)
+const jsonld = { "@context": "https://schema.org", ...mainLd };
+const kindLabel = t("o_" + it.kind);
+---
+<Base lang={lang} path={base.slice(pre(lang).length)} paths={Object.fromEntries(Object.keys(LANGS).map((l) => [l, resourcePath(l, it.kind, it.id)]))} canonicalPaths={Object.fromEntries(Object.keys(LANGS).map((l) => [l, resourcePath(contentLang(it.clang), it.kind, it.id)]))} alternates={false} query={tab === "card" ? "" : `?tab=${tab}`} user={user} jsonld={jsonld}
+      title={`${fullId(it)} · ${kindLabel}`} description={it.description || undefined} noindex={!!it.hidden}>
+<div class={`detail kinded k-${it.kind}`} >
+  {it.hidden && <p class="err u-mt14" role="status">{t("mod_banner")}{user.isAdmin && <Fragment> · <span role="link" tabindex="0" data-o={b64("/a3/?s=hidden")}>{t("moderation")}</span></Fragment>}</p>}
+  <header class="fhead">
+  <Breadcrumb lang={lang} t={t} kind={it.kind} items={[[kindLabel0, kindPath(lang, it.kind)], [fullId(it), base]]} />
+  <div class="dhead">
+    <h1 class="crumb"><a href={profilePath(lang, author(it))} class="uauthor">{author(it)}</a><span> /</span> {it.name}</h1>
+    <LikeButton client:idle id={it.id} likes={it.likes} liked={it.liked} loggedIn={!!user.authenticated} loginHref={`/a2/?next=${encodeURIComponent(base)}`} />
+  </div>
+  <div class="meta">
+    {subLabel(t, it) && <a href={listPath(lang, { kind: it.kind, sub: subOf(it) })}>{subLabel(t, it)}</a>}
+    {TARGET_KINDS.includes(it.kind) && (it.targetFamily
+      ? <span>{t("target")} : <a href={listPath(lang, { kind: it.kind, target: it.targetFamily })}>{targetName(t, it.targetFamily)}</a>{it.targetModel && (targetRes ? <Fragment> · <a href={resourcePath(lang, targetRes.kind, targetRes.id)}>{it.targetModel}</a></Fragment> : ` · ${it.targetModel}`)}</span>
+      : <span>{t("target")} : {t("target_general")}</span>)}
+    {it.clang && <span>{clangName(lang, it.clang)}</span>}
+    <span>{t("license", { l: licName(t, it.license) })}</span>
+    {it.sourceUrl && <a href={it.sourceUrl} target="_blank" rel="nofollow noopener noreferrer">{t("source")} ↗</a>}
+    <span>{t("published_on")} <time datetime={new Date(it.createdAt).toISOString()}>{new Intl.DateTimeFormat(lang, { dateStyle: "long" }).format(new Date(it.createdAt))}</time></span>
+    <span>{t("updated", { a: ago(lang, it.updatedAt) })}</span>
+    <span>▶ {t("n_uses", { n: fmtNum(lang, it.uses) })}</span>
+  </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <a role="tab" aria-selected={tab === "card" ? "true" : "false"} href={base}>{t("tab_card")}</a>
+    {playable && <a role="tab" aria-selected={tab === "play" ? "true" : "false"} href={`${base}?tab=play`} rel="nofollow">{t("tab_play")}</a>}
+    <span role="tab" tabindex="0" aria-selected={tab === "use" ? "true" : "false"} data-o={b64("?tab=use")}>{t("tab_use")}</span>
+    {/* Onglet Communauté : lien hors robots (base64) : ce doublon de la fiche n'est pas exploré */}
+    <span role="tab" tabindex="0" aria-selected={tab === "community" ? "true" : "false"} data-o={b64("?tab=community")}>{t("comments")}{(comments?.items || []).length > 0 && <span class="n"> {comments.items.length}</span>}</span>
+  </nav>
+
+  <div class="cols">
+    <div>
+      {tab === "card" && (
+        <Fragment>
+          {it.description && <div class="block"><p class="u-m0 u-w65">{it.description}</p></div>}
+          {(it.kind === "tool" || it.kind === "harness") && (
+            <div class="block"><h2 class="h4">{t("ac_title")} <span class={`risk risk-${riskOf(it.access)}`}>{t("rk_" + riskOf(it.access))}</span></h2>
+              <ul class="access">{["read", "write", "network", "exec"].map((a) => <li class={it.access?.[a] ? "on" : "off"}><span aria-hidden="true">{it.access?.[a] ? "✓" : "—"}</span> {t("ac_" + a)}{!it.access?.[a] && <span class="visually-hidden"> : {t("no")}</span>}</li>)}</ul></div>
+          )}
+          {it.kind !== "model" && (it.tests || []).length > 0 && (
+            <div class="block"><h2 class="h4">{t("ts_title")}</h2><div class="tscroll"><table class="rows"><thead><tr><th>{t("ts_model")}</th><th>{t("ts_result")}</th><th>{t("ts_score")}</th><th>{t("ts_date")}</th><th>{t("ts_note")}</th></tr></thead>
+              <tbody>{it.tests.map((x) => <tr><td><code>{x.model}</code></td><td><span class={`tres tres-${x.result}`}>{t("tr_" + x.result)}</span></td><td>{x.score == null ? "—" : `${x.score} %`}</td><td>{x.date || "—"}</td><td>{x.note}</td></tr>)}</tbody></table></div></div>
+          )}
+          {it.kind === "context" && (
+            <Fragment>
+              {it.system && <div class="block"><h2 class="h4">{t("h_system")}</h2><pre class="code">{it.system}</pre></div>}
+              {(it.examples || []).length > 0 && (
+                <div class="block"><h2 class="h4">{t("h_examples")}</h2>
+                  {it.examples.map((e) => (
+                    <div class="ex"><div><div class="lbl">{t("lbl_in")}</div><pre class="code">{e.input}</pre></div><div><div class="lbl">{t("lbl_out")}</div><pre class="code">{e.output}</pre></div></div>
+                  ))}
+                </div>
+              )}
+              {it.knowledge && <div class="block"><h2 class="h4">{t("h_knowledge")}</h2><pre class="code">{it.knowledge}</pre></div>}
+            </Fragment>
+          )}
+          {it.kind === "prompt" && (
+            <Fragment>
+              <div class="block"><h2 class="h4">{t("h_template")}</h2><pre class="code">{it.template}</pre></div>
+              {varsOf(it.template).length > 0 && <div class="block"><h2 class="h4">{t("h_vars")}</h2><div class="tags u-m0">{varsOf(it.template).map((v) => <span class="tag u-mono">{v}</span>)}</div></div>}
+            </Fragment>
+          )}
+          {it.kind === "dataset" && (
+            <div class="block"><h2 class="h4">{t("h_preview")}</h2>
+              <div class="tscroll"><table class="rows"><thead><tr><th>#</th><th>{t("th_in")}</th><th>{t("th_out")}</th></tr></thead>
+                <tbody>{pairs.map((p, i) => <tr><td>{i + 1}</td><td>{p.input.slice(0, 400)}</td><td>{p.output.slice(0, 400)}</td></tr>)}</tbody></table></div>
+              {it.rowCount > pairs.length && <p class="note">{t("first_rows", { a: pairs.length, b: it.rowCount })}</p>}
+            </div>
+          )}
+          {it.kind === "tool" && it.toolType === "function" && (
+            <Fragment>
+              {it.toolDescription && <div class="block"><h2 class="h4">{t("fm_tooldesc")}</h2><pre class="code">{it.toolDescription}</pre></div>}
+              <div class="block"><h2 class="h4">{t("h_schema")}</h2><pre class="code">{JSON.stringify(it.schema, null, 2)}</pre></div>
+            </Fragment>
+          )}
+          {it.kind === "tool" && it.toolType === "mcp" && (
+            <Fragment>
+              <div class="block"><h2 class="h4">{t("h_mcp")}</h2><pre class="code">{JSON.stringify(mcpConfig(it), null, 2)}</pre></div>
+              {it.notes && <div class="block"><h2 class="h4">{t("h_notes")}</h2><pre class="code">{it.notes}</pre></div>}
+            </Fragment>
+          )}
+          {it.kind === "model" && (
+            <Fragment>
+              <div class="block"><h2 class="h4">{t("h_model")}</h2><div class="tscroll"><table class="rows"><tbody>
+                {[[t("fm_mbase"), it.baseModel || "—"], [t("f_modeltype"), subLabel(t, it)], [t("s_mparams"), it.params || "—"],
+                  [t("s_mformat"), (it.format || "").toUpperCase()], [t("fm_mquant"), it.quant || "—"],
+                  [t("s_ctx"), it.contextLength ? fmtNum(lang, it.contextLength) : "—"]].map(([a, b]) => <tr><th>{a}</th><td>{b}</td></tr>)}
+              </tbody></table></div></div>
+              <p><a class="btn primary" href={it.weightsUrl} target="_blank" rel="nofollow noopener noreferrer">{t("dl_weights")} ↗</a></p>
+              {(linked.length > 0 || it.epochs || it.trainedAt) && (
+                <div class="block"><h2 class="h4">{t("mg_train")}</h2>
+                  {linked.length > 0 && <div class="list u-mb8">{linked.map((x) => <a class={`card k-${x.kind}`}  href={resourcePath(lang, x.kind, x.id)}><div class="id"><span>{author(x)} /</span> {x.name}</div><p class="note u-m4t">{t("o_" + x.kind)}</p></a>)}</div>}
+                  {(it.epochs || it.trainedAt) && <p class="note">{[it.epochs && `${t("hp_epochs")} : ${it.epochs}`, it.trainedAt && `${t("mg_trained")} : ${it.trainedAt}`].filter(Boolean).join(" · ")}</p>}
+                </div>
+              )}
+              {(it.vramGb || it.speed || it.cpuOk) && (
+                <div class="block"><h2 class="h4">{t("mg_hw")}</h2><div class="tscroll"><table class="rows"><tbody>
+                  {it.vramGb != null && <tr><th>{t("mg_vram")}</th><td>{it.vramGb} Go</td></tr>}
+                  <tr><th>{t("mg_cpu")}</th><td>{it.cpuOk ? t("yes") : t("no")}</td></tr>
+                  {it.speed && <tr><th>{t("mg_speed")}</th><td>{it.speed}</td></tr>}
+                </tbody></table></div></div>
+              )}
+              {((it.languages || []).length > 0 || it.chatTemplate || it.useCases || it.limits) && (
+                <div class="block"><h2 class="h4">{t("mg_usage")}</h2>
+                  {(it.languages || []).length > 0 && <p class="note">{t("mg_langs")} : {it.languages.map((c) => clangName(lang, c)).join(", ")}</p>}
+                  {it.chatTemplate && <p class="note">{t("mg_template")} : <code>{it.chatTemplate}</code></p>}
+                  {it.useCases && <Fragment><h3 class="h4">{t("mg_uses")}</h3><p class="u-pre">{it.useCases}</p></Fragment>}
+                  {it.limits && <Fragment><h3 class="h4">{t("mg_limits")}</h3><p class="u-pre">{it.limits}</p></Fragment>}
+                </div>
+              )}
+              {((it.benchmarks || []).length > 0 || it.version || it.releasedAt || it.changelog) && (
+                <div class="block"><h2 class="h4">{t("mg_eval")}</h2>
+                  {(it.version || it.releasedAt) && <p class="note">{[it.version && `${t("mg_version")} ${it.version}`, it.releasedAt && `${t("mg_released")} : ${it.releasedAt}`].filter(Boolean).join(" · ")}</p>}
+                  {(it.benchmarks || []).length > 0 && <div class="tscroll"><table class="rows"><thead><tr><th>{t("mg_bench")}</th><th>Score</th></tr></thead><tbody>{it.benchmarks.map((b) => <tr><td>{b.name}</td><td>{b.score}</td></tr>)}</tbody></table></div>}
+                  {it.changelog && <Fragment><h3 class="h4">{t("mg_changelog")}</h3><pre class="code">{it.changelog}</pre></Fragment>}
+                </div>
+              )}
+              {it.notes && <div class="block"><h2 class="h4">{t("h_notes")}</h2><pre class="code">{it.notes}</pre></div>}
+            </Fragment>
+          )}
+          {it.kind === "agent" && (
+            <Fragment>
+              <div class="block"><h2 class="h4">{t("ag_instr")}</h2><pre class="code">{it.instructions}</pre></div>
+              {(it.steps || []).length > 0 && <div class="block"><h2 class="h4">{t("ag_steps")}</h2><ol>{it.steps.map((x) => <li>{x}</li>)}</ol></div>}
+              {agentLinks.length > 0 && <div class="block"><h2 class="h4">{t("ag_links")}</h2><div class="list">{agentLinks.map((x) => <a class={`card k-${x.kind}`}  href={resourcePath(lang, x.kind, x.id)}><div class="id"><span>{author(x)} /</span> {x.name}</div><p class="note u-m4t">{t("o_" + x.kind)}</p></a>)}</div></div>}
+              {it.guardrails && <div class="block"><h2 class="h4">{t("ag_guard")}</h2><pre class="code">{it.guardrails}</pre></div>}
+            </Fragment>
+          )}
+          {it.kind === "rag" && (
+            <Fragment>
+              {it.sources && <div class="block"><h2 class="h4">{t("rg_sources")}</h2><p>{it.sources}</p></div>}
+              <div class="block"><h2 class="h4">{t("rg_pipeline")}</h2><div class="tscroll"><table class="rows"><tbody>
+                {[[t("rg_chunk"), `${it.chunkSize} ${t("chars")}`], [t("rg_overlap"), it.chunkOverlap], [t("rg_emb"), it.embedding], [t("rg_store"), VECTOR_STORES[it.vectorStore]?.startsWith("fam_") ? t(VECTOR_STORES[it.vectorStore]) : VECTOR_STORES[it.vectorStore]], [t("rg_topk"), it.topK], [t("rg_rerank"), it.reranker || "—"]].map(([a, b]) => <tr><th>{a}</th><td>{b}</td></tr>)}
+              </tbody></table></div></div>
+              <div class="block"><h2 class="h4">{t("rg_prompt")}</h2><pre class="code">{it.promptTemplate}</pre></div>
+            </Fragment>
+          )}
+          {it.kind === "harness" && (
+            <Fragment>
+              <div class="block"><h2 class="h4">{t("hn_instr")}</h2><pre class="code">{it.instructions}</pre></div>
+              {((it.allow || []).length > 0 || (it.deny || []).length > 0) && <div class="block"><h2 class="h4">{t("hn_perms")}</h2><div class="tscroll"><table class="rows"><tbody>
+                {(it.allow || []).map((x) => <tr><th>{t("hn_allow")}</th><td><code>{x}</code></td></tr>)}
+                {(it.deny || []).map((x) => <tr><th>{t("hn_deny")}</th><td><code>{x}</code></td></tr>)}
+              </tbody></table></div></div>}
+              {agentLinks.length > 0 && <div class="block"><h2 class="h4">{t("ag_mcp")}</h2><div class="list">{agentLinks.map((x) => <a class={`card k-${x.kind}`}  href={resourcePath(lang, x.kind, x.id)}><div class="id"><span>{author(x)} /</span> {x.name}</div></a>)}</div></div>}
+              {it.hooks && <div class="block"><h2 class="h4">Hooks</h2><pre class="code">{it.hooks}</pre></div>}
+            </Fragment>
+          )}
+          {it.kind === "skill" && (
+            <Fragment>
+              {it.whenToUse && <div class="block"><h2 class="h4">{t("sk_when")}</h2><p>{it.whenToUse}</p></div>}
+              <div class="block"><h2 class="h4">SKILL.md</h2><pre class="code">{it.instructions}</pre></div>
+              {it.resources && <div class="block"><h2 class="h4">{t("sk_res")}</h2><pre class="code">{it.resources}</pre></div>}
+            </Fragment>
+          )}
+          {it.kind === "eval" && (
+            <Fragment>
+              {evalTarget && <div class="block"><h2 class="h4">{t("ev_target")}</h2><a class={`card k-${evalTarget.kind}`}  href={resourcePath(lang, evalTarget.kind, evalTarget.id)}><div class="id"><span>{author(evalTarget)} /</span> {evalTarget.name}</div></a></div>}
+              {it.criteria && <div class="block"><h2 class="h4">{t("ev_crit")}</h2><p>{it.criteria}</p></div>}
+              <div class="block"><h2 class="h4">{t("ev_cases")}</h2><div class="tscroll"><table class="rows"><thead><tr><th>#</th><th>{t("lbl_in")}</th><th>{t("ev_expected")}</th></tr></thead>
+                <tbody>{(it.cases || []).slice(0, 30).map((c, i) => <tr><td>{i + 1}</td><td>{c.input}</td><td>{c.expected}</td></tr>)}</tbody></table></div></div>
+            </Fragment>
+          )}
+          {it.kind === "lora" && (
+            <Fragment>
+              <div class="block"><h2 class="h4">{t("h_hparams")}</h2><div class="tscroll"><table class="rows"><tbody>
+                {[[t("hp_base"), it.baseModel], [t("hp_method"), subLabel(t, it)], ["r / alpha / dropout", `${it.r} / ${it.alpha} / ${it.dropout}`], [t("hp_targets"), (it.targets || []).join(", ")], [t("hp_lr"), it.lr], [t("hp_epochs"), it.epochs], [t("hp_batch"), `${it.batch} × ${it.gradAcc} = ${it.batch * it.gradAcc}`], [t("hp_seq"), it.seqLen]].map(([a, b]) => <tr><th>{a}</th><td>{b}</td></tr>)}
+              </tbody></table></div></div>
+              {ds && <div class="block"><h2 class="h4">{t("h_linked")}</h2><a class="card k-dataset" href={resourcePath(lang, ds.kind, ds.id)}><div class="id"><span>{author(ds)} /</span> {ds.name}</div></a></div>}
+              {it.notes && <div class="block"><h2 class="h4">{t("h_notes")}</h2><pre class="code">{it.notes}</pre></div>}
+            </Fragment>
+          )}
+          {it.kind !== "model" && it.changelog && <div class="block"><h2 class="h4">{t("mg_changelog")}{it.version && ` · ${it.version}`}</h2><pre class="code">{it.changelog}</pre></div>}
+        </Fragment>
+      )}
+
+      {tab === "play" && (
+        <Playground client:load it={it} s={dict(lang, S.name)} enabled={cfg.sampleEnabled} loggedIn={true} />
+      )}
+
+      {tab === "use" && (
+        <Fragment>
+          <div class="block"><h2 class="h4">{ex.filename}</h2><pre class="code u-scroll420">{ex.text.length > 20000 ? ex.text.slice(0, 20000) + "\n…" : ex.text}</pre></div>
+          {snippetsOf(it, t, S.origin).map(([a, c]) => <div class="block"><h2 class="h4">{a}</h2><pre class="code">{c}</pre></div>)}
+        </Fragment>
+      )}
+      {tab === "community" && (
+      <section class="block comments" id="commentaires">
+        <h2 class="h4">{t("comments")}</h2>
+        {(comments?.items || []).length === 0 && <p class="note">{t("c_empty")}</p>}
+        {(comments?.items || []).map((c) => (
+          <article class="comment">
+            <div class="cmeta"><a href={profilePath(lang, c.author)}><strong>{c.author}</strong></a> · <span class="note">{ago(lang, c.createdAt)}</span>
+              {user.authenticated && (user.id === c.authorId || user.isAdmin) && (
+                <form method="post" action={`/api/comments/${c.id}/delete`} class="cdel">
+                  <input type="hidden" name="next" value={`${base}?tab=community`} /><button class="btn sm" type="submit">{t("delete")}</button>
+                </form>
+              )}
+            </div>
+            <p>{c.body}</p>
+          </article>
+        ))}
+        {user.authenticated ? (
+          <form method="post" action={`/api/resources/${encodeURIComponent(it.id)}/comments`} class="cform">
+            <input type="hidden" name="next" value={`${base}?tab=community`} />
+            <textarea name="body" maxlength="2000" required placeholder={t("c_ph")} aria-label={t("c_ph")}></textarea>
+            <button class="btn primary sm" type="submit">{t("c_send")}</button>
+          </form>
+        ) : (
+          <p class="note u-row10 u-center u-wrap"><span class="btn primary sm" role="link" tabindex="0" data-o={b64("/a2/?next=")}>{t("login")}</span> {t("c_login")}</p>
+        )}
+      </section>
+      )}
+    </div>
+
+    <aside class="side">
+      <div class="box"><dl>{stats.map(([a, b]) => <Fragment><dt>{a}</dt><dd>{b}</dd></Fragment>)}</dl></div>
+      {(it.tags || []).length > 0 && <div class="tags sidetags">{it.tags.map((g) => <a class="tag" role="link" tabindex="0" data-o={b64(tagPath(lang, it.kind, g))}>#{g}</a>)}</div>}
+      <div class="box u-row8 u-wrap">
+        <ExportButtons client:visible id={it.id} filename={ex.filename} text={ex.remote ? "" : ex.text}
+          downloadHref={it.kind === "dataset" ? `/api/resources/${encodeURIComponent(it.id)}/download` : ""}
+          copyLabel={t("copy", { x: ex.filename.split(".").pop().toUpperCase() })} downloadLabel={t("download")} copiedLabel={t("copied")} />
+        {mine && <span class="btn sm" role="link" tabindex="0" data-o={b64(`/a2/edit/${encodeURIComponent(it.id)}`)}>{t("edit")}</span>}
+        {user.authenticated && <span class="btn sm" role="link" tabindex="0" data-o={b64(`/a2/new/${it.kind}?fork=${encodeURIComponent(it.id)}`)}>{t("duplicate")}</span>}
+        {mine && <DeleteButton client:visible id={it.id} label={t("delete")} confirmText={t("confirm_delete")} redirect={kindPath(lang, it.kind)} />}
+      </div>
+      {Astro.url.searchParams.get("signale") ? <p class="okmsg">{t("rep_thanks")}</p> : (
+        <details class="note"><summary>{t("report_q")} {t("report")}</summary>
+          <form method="post" action="/api/report" class="reportform">
+            <input type="hidden" name="target_type" value="resource" /><input type="hidden" name="target_id" value={it.id} />
+            <input type="hidden" name="next" value={base} />
+            <input name="reason" maxlength="500" placeholder={t("rep_reason")} aria-label={t("rep_reason")} />
+            <button class="btn sm" type="submit">{t("report")}</button>
+          </form>
+        </details>
+      )}
+    </aside>
+  </div>
+</div>
+</Base>

@@ -1,0 +1,32 @@
+---
+// Inscription de la communauté : un compte sert à commenter et aimer ; publier reste réservé à l'administrateur.
+import Base from "../../layouts/Base.astro";
+import { translator } from "../../lib/i18n.js";
+import { api, noCache, site } from "../../lib/server.js";
+
+const lang = "fr";
+const t = translator(lang, site().name);
+noCache(Astro);
+const user = await api(Astro, "/api/auth/me");
+const next = Astro.url.searchParams.get("next") || "/";
+const error = Astro.url.searchParams.get("error");
+if (user.authenticated) return Astro.redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
+---
+<Base lang={lang} path="/" user={user} title={t("signup")} noindex={true} admin={true}>
+  <div class="authbox">
+    <h1>{t("signup")}</h1>
+    <p class="note">{t("c_why")}</p>
+    {error && <p class="err" role="alert">{t("err_" + error)}</p>}
+    <form method="post" action="/api/auth/signup">
+      <input type="hidden" name="lang" value={lang} /><input type="hidden" name="next" value={next} />
+      <div class="field"><label for="u">{t("username")}</label><input id="u" name="username" autocomplete="username" pattern="[a-z0-9_\-]{3,30}" required /></div>
+      <div class="field"><label for="e">{t("email")} <span class="hint">{t("email_h")}</span></label><input id="e" name="email" type="email" maxlength="254" autocomplete="email" required /></div>
+      <div class="field"><label for="p">{t("password")}</label><input id="p" name="password" type="password" minlength="10" autocomplete="new-password" required /></div>
+      <div class="field"><label for="p2">{t("password2")}</label><input id="p2" name="password2" type="password" minlength="10" autocomplete="new-password" required /></div>
+      <label class="accept"><input type="checkbox" name="accept" value="1" required />
+        <span>{t("c_accept")} <a href="/legal/cgu" target="_blank">{t("accept_link")}</a></span></label>
+      <button class="btn primary" type="submit">{t("signup")}</button>
+    </form>
+    <p class="note u-mt16">{t("have_account")} <a href={`/a2/?next=${encodeURIComponent(next)}`}>{t("login")}</a></p>
+  </div>
+</Base>

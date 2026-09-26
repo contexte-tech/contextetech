@@ -1,0 +1,28 @@
+---
+// Fil d'Ariane visible, balisé en microdata schema.org/BreadcrumbList.
+// items : [[libellé, chemin], …] ; le dernier élément est la page courante.
+// Pas d'« Accueil » (le logo y mène déjà) ; rien n'est affiché s'il ne reste qu'un niveau.
+import { site } from "../lib/server.js";
+import { familyPath } from "../lib/paths.js";
+import { FAMILIES } from "../lib/format.js";
+const { lang, t, items = [], kind = "" } = Astro.props;
+const origin = site().origin;
+// Un type est précédé de sa famille (sauf Modèles, dont la famille est le catalogue lui-même)
+const fam = kind && kind !== "model" ? (FAMILIES.find(([, ks]) => ks.includes(kind)) || [])[0] : "";
+const all = [...(fam ? [[t(fam), familyPath(lang, fam)]] : []), ...items];
+// L'étape du type s'affiche en badge de couleur (remplace le badge sous le titre des fiches)
+const typeAt = kind ? (fam ? 1 : 0) : -1;
+const badge = (i) => (i === typeAt ? { class: `type k-${kind}` } : {});
+---
+{all.length > 1 && <nav class="bc" aria-label={t("bc_label")}>
+  <ol itemscope itemtype="https://schema.org/BreadcrumbList">
+    {all.map(([name, path], i) => (
+      <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        {i < all.length - 1
+          ? <a itemprop="item" href={path} {...badge(i)}><span itemprop="name">{name}</span></a>
+          : <Fragment><span itemprop="name" aria-current="page" {...badge(i)}>{name}</span><link itemprop="item" href={origin + path} /></Fragment>}
+        <meta itemprop="position" content={String(i + 1)} />
+      </li>
+    ))}
+  </ol>
+</nav>}

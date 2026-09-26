@@ -1,0 +1,40 @@
+---
+// Zone administrateur : tags de tout le site. Renommer fusionne ; vider le nouveau nom supprime le tag.
+import Base from "../../layouts/Base.astro";
+import { translator } from "../../lib/i18n.js";
+import { api, noCache, site } from "../../lib/server.js";
+
+const lang = "fr";
+const t = translator(lang, site().name);
+noCache(Astro);
+const user = await api(Astro, "/api/auth/me");
+if (!user.authenticated) return Astro.redirect("/a2/?next=/a3/tags");
+if (!user.isAdmin) return Astro.redirect("/a2/");
+const data = await api(Astro, "/api/admin/tags");
+const m = Astro.url.searchParams.get("m");
+---
+<Base lang={lang} path="/" user={user} title={t("tags_admin")} noindex={true} admin={true}>
+  <div class="moderation">
+    <h1 class="h2">{t("tags_admin")}</h1>
+    <nav class="tabs" role="tablist">
+      <a role="tab" aria-selected="false" href="/a3/">{t("moderation")}</a>
+      <a role="tab" aria-selected="false" href="/a3/membres">{t("members")}</a>
+      <a role="tab" aria-selected="true" href="/a3/tags">{t("tags_admin")}<span class="n"> {data.items.length}</span></a>
+    </nav>
+    <p class="note">{t("tags_help")}</p>
+    {m && <p class="okmsg" role="status">{t("tags_done", { n: m })}</p>}
+    <div class="tscroll"><table class="rows modtable">
+      <thead><tr><th>Tag</th><th>{t("tags_uses")}</th><th>{t("tags_rename")}</th></tr></thead>
+      <tbody>{data.items.map(([g, n]) => (
+        <tr>
+          <td><code>#{g}</code></td><td class="note">{n}</td>
+          <td><form method="post" action="/api/admin/tags/rename" class="tagrename">
+            <input type="hidden" name="old" value={g} />
+            <input name="new" value={g} aria-label={t("tags_rename")} />
+            <button class="btn sm" type="submit">OK</button>
+          </form></td>
+        </tr>
+      ))}</tbody>
+    </table></div>
+  </div>
+</Base>

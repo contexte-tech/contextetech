@@ -1,0 +1,349 @@
+[
+ {
+  "id": "contextetech--anonymisation-rgpd",
+  "kind": "context",
+  "name": "anonymisation-rgpd",
+  "authorHandle": "contextetech",
+  "description": "Remplace les données personnelles d'un texte (noms, e-mails, téléphones, adresses, IBAN) par des balises, avant de l'envoyer à un service tiers.",
+  "tags": [
+   "rgpd",
+   "anonymisation",
+   "conformite"
+  ],
+  "clang": "fr",
+  "license": "CC-BY-4.0",
+  "sub": "fewshot",
+  "sourceUrl": "",
+  "data": {
+   "system": "Tu anonymises des textes en français avant leur traitement par un service tiers.\nRemplace chaque donnée personnelle par une balise entre crochets, numérotée si plusieurs personnes apparaissent : [NOM_1], [PRENOM_1], [EMAIL_1], [TELEPHONE_1], [ADRESSE_1], [IBAN_1], [NUMERO_SECU_1], [DATE_NAISSANCE_1].\nNe modifie rien d'autre : ni la ponctuation, ni les fautes, ni le sens.\nRéponds uniquement avec le texte anonymisé.",
+   "knowledge": "Sont des données personnelles : nom, prénom, adresse postale, e-mail, numéro de téléphone, IBAN, numéro de sécurité sociale, date de naissance, plaque d'immatriculation.\nNe sont pas des données personnelles : noms d'entreprises, de villes seules, de produits.",
+   "examples": [
+    {
+     "input": "Bonjour, je suis Marie Dupont, joignable au 06 12 34 56 78 ou marie.dupont@gmail.com.",
+     "output": "Bonjour, je suis [PRENOM_1] [NOM_1], joignable au [TELEPHONE_1] ou [EMAIL_1]."
+    },
+    {
+     "input": "Merci de rembourser sur FR76 3000 6000 0112 3456 7890 189, adresse : 12 rue des Lilas, 72000 Le Mans.",
+     "output": "Merci de rembourser sur [IBAN_1], adresse : [ADRESSE_1]."
+    }
+   ]
+  }
+ },
+ {
+  "id": "contextetech--fiche-produit-ecommerce",
+  "kind": "prompt",
+  "name": "fiche-produit-ecommerce",
+  "authorHandle": "contextetech",
+  "description": "Génère une fiche produit e-commerce en français : titre, accroche, points forts et description, à partir des caractéristiques brutes.",
+  "tags": [
+   "ecommerce",
+   "redaction",
+   "seo"
+  ],
+  "clang": "fr",
+  "license": "MIT",
+  "sub": "",
+  "sourceUrl": "",
+  "data": {
+   "template": "Rédige une fiche produit pour une boutique en ligne.\n\nProduit : {{produit}}\nCaractéristiques : {{caracteristiques}}\nPublic visé : {{public}}\n\nRends, en français :\n1. Un titre de 70 caractères maximum, avec le mot-clé principal au début\n2. Une accroche d'une phrase\n3. 4 points forts courts, sous forme de liste\n4. Une description de 120 à 180 mots, sans superlatifs creux\n\nN'invente aucune caractéristique absente de la liste."
+  }
+ },
+ {
+  "id": "contextetech--anonymisation-rgpd-fr",
+  "kind": "dataset",
+  "name": "anonymisation-rgpd-fr",
+  "authorHandle": "contextetech",
+  "description": "20 exemples rédigés à la main (personnes et numéros fictifs) pour apprendre à un modèle à anonymiser des textes en français, cas sans donnée personnelle inclus.",
+  "tags": [
+   "rgpd",
+   "anonymisation",
+   "fine-tuning"
+  ],
+  "clang": "fr",
+  "license": "CC-BY-4.0",
+  "sub": "chat",
+  "sourceUrl": "",
+  "data": {
+   "jsonl": "{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Bonjour, je m'appelle Lucas Moreau et mon numéro est le 06 45 78 12 90.\"}, {\"role\": \"assistant\", \"content\": \"Bonjour, je m'appelle [PRENOM_1] [NOM_1] et mon numéro est le [TELEPHONE_1].\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Envoyez la facture à claire.fontaine@laposte.net avant vendredi.\"}, {\"role\": \"assistant\", \"content\": \"Envoyez la facture à [EMAIL_1] avant vendredi.\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Le virement doit partir sur FR76 1820 6000 4512 3456 7890 123.\"}, {\"role\": \"assistant\", \"content\": \"Le virement doit partir sur [IBAN_1].\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Livraison au 8 impasse des Tilleuls, 49100 Angers, chez M. Garnier.\"}, {\"role\": \"assistant\", \"content\": \"Livraison au [ADRESSE_1], chez M. [NOM_1].\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Patient : Hugo Lambert, né le 03/11/1985, n° de sécurité sociale 1 85 11 75 056 123 45.\"}, {\"role\": \"assistant\", \"content\": \"Patient : [PRENOM_1] [NOM_1], né le [DATE_NAISSANCE_1], n° de sécurité sociale [NUMERO_SECU_1].\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Réunion avec Emma Petit et Nathan Roux demain à 10 h.\"}, {\"role\": \"assistant\", \"content\": \"Réunion avec [PRENOM_1] [NOM_1] et [PRENOM_2] [NOM_2] demain à 10 h.\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Rappelez Mme Chevalier au 02 43 55 18 70, elle attend un devis.\"}, {\"role\": \"assistant\", \"content\": \"Rappelez Mme [NOM_1] au [TELEPHONE_1], elle attend un devis.\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"La commande 45872 est partie de notre entrepôt de Lyon ce matin.\"}, {\"role\": \"assistant\", \"content\": \"La commande 45872 est partie de notre entrepôt de Lyon ce matin.\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Contact technique : thomas.girard@exemple-entreprise.fr / 07 12 98 44 31.\"}, {\"role\": \"assistant\", \"content\": \"Contact technique : [EMAIL_1] / [TELEPHONE_1].\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Adresse de facturation : Julie Blanc, 27 avenue Jean Jaurès, 69007 Lyon.\"}, {\"role\": \"assistant\", \"content\": \"Adresse de facturation : [PRENOM_1] [NOM_1], [ADRESSE_1].\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Le véhicule immatriculé GH-482-KL appartient à Marc Robin.\"}, {\"role\": \"assistant\", \"content\": \"Le véhicule immatriculé [PLAQUE_1] appartient à [PRENOM_1] [NOM_1].\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Merci à toute l'équipe de Renault pour l'accueil à Flins.\"}, {\"role\": \"assistant\", \"content\": \"Merci à toute l'équipe de Renault pour l'accueil à Flins.\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Mon mot de passe ne marche plus, mon identifiant est sarah.dumont@free.fr.\"}, {\"role\": \"assistant\", \"content\": \"Mon mot de passe ne marche plus, mon identifiant est [EMAIL_1].\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Né le 21 juillet 1978, Olivier Faure réside à Toulouse.\"}, {\"role\": \"assistant\", \"content\": \"Né le [DATE_NAISSANCE_1], [PRENOM_1] [NOM_1] réside à Toulouse.\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Remboursement demandé par Inès Mercier, IBAN FR14 2004 1010 0505 0001 3M02 606.\"}, {\"role\": \"assistant\", \"content\": \"Remboursement demandé par [PRENOM_1] [NOM_1], IBAN [IBAN_1].\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Le produit est livré sous 48 h partout en France métropolitaine.\"}, {\"role\": \"assistant\", \"content\": \"Le produit est livré sous 48 h partout en France métropolitaine.\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Pouvez-vous écrire à paul.henry@gmail.com et à anne.henry@gmail.com ?\"}, {\"role\": \"assistant\", \"content\": \"Pouvez-vous écrire à [EMAIL_1] et à [EMAIL_2] ?\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Signé : Kevin Masson, 5 rue Victor Hugo, 72300 Sablé-sur-Sarthe, tél. 06 20 30 40 50.\"}, {\"role\": \"assistant\", \"content\": \"Signé : [PRENOM_1] [NOM_1], [ADRESSE_1], tél. [TELEPHONE_1].\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Le fournisseur Atelier Duval nous a livré 12 pièces lundi.\"}, {\"role\": \"assistant\", \"content\": \"Le fournisseur Atelier Duval nous a livré 12 pièces lundi.\"}]}\n{\"messages\": [{\"role\": \"system\", \"content\": \"Remplace chaque donnée personnelle par une balise entre crochets numérotée ([NOM_1], [EMAIL_1]…). Ne change rien d'autre.\"}, {\"role\": \"user\", \"content\": \"Candidate : Léa Gauthier, 32 ans, joignable au +33 6 77 88 99 00.\"}, {\"role\": \"assistant\", \"content\": \"Candidate : [PRENOM_1] [NOM_1], 32 ans, joignable au [TELEPHONE_1].\"}]}"
+  }
+ },
+ {
+  "id": "contextetech--mistral7b-anonymisation-qlora",
+  "kind": "lora",
+  "name": "mistral7b-anonymisation-qlora",
+  "authorHandle": "contextetech",
+  "description": "Configuration QLoRA de départ pour spécialiser Mistral 7B Instruct dans l'anonymisation RGPD, avec le dataset anonymisation-rgpd-fr. Tient sur un GPU de 24 Go.",
+  "tags": [
+   "qlora",
+   "mistral",
+   "rgpd"
+  ],
+  "clang": "multi",
+  "license": "Apache-2.0",
+  "sub": "qlora",
+  "sourceUrl": "",
+  "data": {
+   "baseModel": "mistralai/Mistral-7B-Instruct-v0.3",
+   "r": 16,
+   "alpha": 32,
+   "dropout": 0.05,
+   "lr": 0.0002,
+   "epochs": 3,
+   "batch": 4,
+   "gradAcc": 4,
+   "seqLen": 1024,
+   "targets": [
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj",
+    "gate_proj",
+    "up_proj",
+    "down_proj"
+   ],
+   "datasetId": "contextetech--anonymisation-rgpd-fr",
+   "notes": "Configuration de départ : elle n'a pas encore été entraînée ni évaluée par ContexteTech. Avec 20 exemples seulement, le dataset sert à tester la chaîne ; pour un vrai usage, visez plusieurs centaines d'exemples. Mesurez le résultat avec l'évaluation eval-anonymisation-rgpd."
+  }
+ },
+ {
+  "id": "contextetech--mcp-filesystem",
+  "kind": "tool",
+  "name": "mcp-filesystem",
+  "authorHandle": "contextetech",
+  "description": "Serveur MCP officiel pour lire, créer et modifier des fichiers dans les dossiers que vous autorisez, et nulle part ailleurs.",
+  "tags": [
+   "mcp",
+   "fichiers",
+   "officiel"
+  ],
+  "clang": "multi",
+  "license": "MIT",
+  "sub": "mcp",
+  "sourceUrl": "https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem",
+  "data": {
+   "toolName": "filesystem",
+   "transport": "stdio",
+   "command": "npx -y @modelcontextprotocol/server-filesystem /chemin/vers/dossier",
+   "url": "",
+   "env": [],
+   "notes": "Remplacez /chemin/vers/dossier par le ou les dossiers à exposer (plusieurs chemins possibles). Le serveur refuse tout accès en dehors. Nécessite Node.js.",
+   "access": {
+    "read": true,
+    "write": true,
+    "network": false,
+    "exec": false
+   }
+  }
+ },
+ {
+  "id": "contextetech--mistral-7b-instruct-v0.3",
+  "kind": "model",
+  "name": "mistral-7b-instruct-v0.3",
+  "authorHandle": "contextetech",
+  "description": "Fiche de référence du modèle Mistral 7B Instruct v0.3 publié par Mistral AI : 7 milliards de paramètres, licence Apache 2.0, appel de fonctions.",
+  "tags": [
+   "mistral",
+   "7b",
+   "open-weights"
+  ],
+  "clang": "multi",
+  "license": "Apache-2.0",
+  "sub": "finetune",
+  "sourceUrl": "https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3",
+  "data": {
+   "baseModel": "mistralai/Mistral-7B-v0.3",
+   "family": "mistral",
+   "params": "7B",
+   "format": "safetensors",
+   "quant": "",
+   "contextLength": 32768,
+   "weightsUrl": "https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3",
+   "notes": "Modèle publié par Mistral AI, référencé ici pour servir de base aux configurations LoRA du catalogue. ContexteTech ne l'a pas modifié.",
+   "datasetIds": [],
+   "loraId": "",
+   "epochs": null,
+   "trainedAt": "",
+   "vramGb": 16,
+   "cpuOk": false,
+   "speed": "",
+   "languages": [
+    "en",
+    "fr"
+   ],
+   "chatTemplate": "mistral",
+   "useCases": "Assistant généraliste, extraction d'informations, appel de fonctions (function calling), base de fine-tuning.",
+   "limits": "Pas de mécanisme de modération intégré. Moins précis que les grands modèles sur le raisonnement complexe.",
+   "benchmarks": [],
+   "version": "0.3",
+   "releasedAt": "2024-05-22",
+   "changelog": ""
+  }
+ },
+ {
+  "id": "contextetech--agent-tri-documents",
+  "kind": "agent",
+  "name": "agent-tri-documents",
+  "authorHandle": "contextetech",
+  "description": "Agent qui range un dossier de documents : lit chaque fichier, le renomme clairement et le classe dans le bon sous-dossier.",
+  "tags": [
+   "documents",
+   "agent",
+   "classement"
+  ],
+  "clang": "fr",
+  "license": "MIT",
+  "sub": "",
+  "sourceUrl": "",
+  "data": {
+   "instructions": "Tu ranges le dossier de documents indiqué par l'utilisateur.\nPour chaque fichier : lis-le, identifie son type (facture, contrat, devis, courrier, autre), sa date et son émetteur, puis propose un nouveau nom au format AAAA-MM-JJ_type_emetteur.ext et un sous-dossier.\nMontre d'abord le plan complet et attends la validation de l'utilisateur avant de déplacer quoi que ce soit.",
+   "steps": [
+    "Lister les fichiers du dossier",
+    "Lire chaque fichier et identifier type, date, émetteur",
+    "Proposer le nouveau nom et le sous-dossier",
+    "Afficher le plan complet et attendre la validation",
+    "Renommer et déplacer, puis afficher le bilan"
+   ],
+   "framework": "claude-agent-sdk",
+   "mcpIds": [
+    "contextetech--mcp-filesystem"
+   ],
+   "contextIds": [],
+   "guardrails": "Ne jamais supprimer de fichier. Ne rien déplacer sans validation. Ne pas sortir du dossier indiqué."
+  }
+ },
+ {
+  "id": "contextetech--skill-compte-rendu-reunion",
+  "kind": "skill",
+  "name": "skill-compte-rendu-reunion",
+  "authorHandle": "contextetech",
+  "description": "Skill qui transforme des notes de réunion en compte rendu clair : décisions, actions avec responsable et échéance, points ouverts.",
+  "tags": [
+   "reunion",
+   "redaction",
+   "skill"
+  ],
+  "clang": "fr",
+  "license": "MIT",
+  "sub": "",
+  "sourceUrl": "",
+  "data": {
+   "skillName": "compte-rendu-reunion",
+   "whenToUse": "Quand l'utilisateur fournit des notes ou une transcription de réunion et demande un compte rendu, une synthèse ou la liste des actions.",
+   "instructions": "# Compte rendu de réunion\n\n1. Lis les notes en entier avant d'écrire.\n2. Rédige quatre sections :\n   - **Décisions** : ce qui a été tranché, une ligne chacune.\n   - **Actions** : tableau Action | Responsable | Échéance. Écris « à définir » si l'information manque.\n   - **Points ouverts** : questions restées sans réponse.\n   - **Prochaine réunion** : date et objet, si mentionnés.\n3. Reste factuel : n'invente ni décision, ni responsable, ni date.\n4. Pas plus d'une page.",
+   "resources": ""
+  }
+ },
+ {
+  "id": "contextetech--eval-anonymisation-rgpd",
+  "kind": "eval",
+  "name": "eval-anonymisation-rgpd",
+  "authorHandle": "contextetech",
+  "description": "Vérifie qu'un modèle ou un contexte d'anonymisation ne laisse passer aucune donnée personnelle (e-mail, téléphone, IBAN).",
+  "tags": [
+   "rgpd",
+   "evaluation",
+   "anonymisation"
+  ],
+  "clang": "fr",
+  "license": "CC-BY-4.0",
+  "sub": "",
+  "sourceUrl": "",
+  "data": {
+   "cases": [
+    {
+     "input": "Contactez Paul Martin au 07 81 22 33 44.",
+     "expected": "\\[TELEPHONE_1\\]"
+    },
+    {
+     "input": "Mon e-mail est jean.leroy@orange.fr, merci.",
+     "expected": "\\[EMAIL_1\\]"
+    },
+    {
+     "input": "IBAN : FR76 1027 8060 3100 0205 5930 142",
+     "expected": "\\[IBAN_1\\]"
+    },
+    {
+     "input": "Née le 14/02/1990 à Nantes, Sophie Bernard.",
+     "expected": "\\[DATE_NAISSANCE_1\\]"
+    },
+    {
+     "input": "Le colis part de Rennes demain.",
+     "expected": "^Le colis part de Rennes demain\\.$"
+    }
+   ],
+   "metric": "regex",
+   "criteria": "La donnée personnelle doit être remplacée par la bonne balise ; un texte sans donnée personnelle doit rester identique.",
+   "threshold": 100,
+   "evaluatesId": "contextetech--anonymisation-rgpd"
+  }
+ },
+ {
+  "id": "contextetech--rag-documentation-produit-fr",
+  "kind": "rag",
+  "name": "rag-documentation-produit-fr",
+  "authorHandle": "contextetech",
+  "description": "Pipeline RAG pour un assistant qui répond sur la documentation d'un produit en français, en citant ses sources.",
+  "tags": [
+   "rag",
+   "documentation",
+   "support"
+  ],
+  "clang": "fr",
+  "license": "MIT",
+  "sub": "",
+  "sourceUrl": "",
+  "data": {
+   "sources": "Pages de documentation produit en Markdown ou HTML, réindexées à chaque mise à jour.",
+   "chunkSize": 800,
+   "chunkOverlap": 120,
+   "embedding": "intfloat/multilingual-e5-large",
+   "vectorStore": "pgvector",
+   "topK": 6,
+   "reranker": "BAAI/bge-reranker-v2-m3",
+   "promptTemplate": "Tu réponds aux questions sur le produit uniquement à partir des extraits ci-dessous.\nCite la page source de chaque information entre crochets.\nSi la réponse n'est pas dans les extraits, dis-le et propose de contacter le support.\n\nExtraits :\n{{context}}\n\nQuestion : {{question}}"
+  }
+ },
+ {
+  "id": "contextetech--harness-projet-python",
+  "kind": "harness",
+  "name": "harness-projet-python",
+  "authorHandle": "contextetech",
+  "description": "Configuration Claude Code pour un projet Python avec uv, pytest et ruff : conventions, commandes autorisées, fichiers protégés.",
+  "tags": [
+   "claude-code",
+   "python",
+   "configuration"
+  ],
+  "clang": "fr",
+  "license": "MIT",
+  "sub": "",
+  "sourceUrl": "",
+  "data": {
+   "harness": "claude-code",
+   "instructions": "# Projet Python\n\n- Environnement géré par uv : `uv run` pour lancer, `uv add` pour ajouter une dépendance.\n- Avant de proposer un commit : `uv run ruff check .` et `uv run pytest` doivent passer.\n- Code annoté (types) et testé ; un test pour chaque bug corrigé.\n- Ne jamais modifier `.env` ni les fichiers de `secrets/`.",
+   "allow": [
+    "Bash(uv run pytest:*)",
+    "Bash(uv run ruff check:*)",
+    "Bash(uv run ruff format:*)",
+    "Bash(git status)",
+    "Bash(git diff:*)",
+    "Read",
+    "Edit"
+   ],
+   "deny": [
+    "Read(.env)",
+    "Read(secrets/**)",
+    "Bash(git push:*)",
+    "Bash(rm -rf:*)"
+   ],
+   "hooks": "",
+   "mcpIds": [],
+   "access": {
+    "read": true,
+    "write": true,
+    "network": false,
+    "exec": true
+   }
+  }
+ }
+]

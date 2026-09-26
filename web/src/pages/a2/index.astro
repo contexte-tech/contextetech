@@ -1,0 +1,36 @@
+---
+// Zone privée (comme /a2/ sur pmo) : connexion des membres ; l'administrateur y choisit ensuite le type à publier.
+import Base from "../../layouts/Base.astro";
+import { KCOLOR, KINDS } from "../../lib/format.js";
+import { translator } from "../../lib/i18n.js";
+import { api, noCache, site } from "../../lib/server.js";
+
+const lang = "fr";
+const t = translator(lang, site().name);
+noCache(Astro);
+const user = await api(Astro, "/api/auth/me");
+const next = Astro.url.searchParams.get("next") || "";
+const error = Astro.url.searchParams.get("error");
+// Un membre non admin n'est jamais renvoyé vers une page de publication (sinon boucle /a2/ ↔ /a2/new)
+if (user.authenticated && next.startsWith("/") && !next.startsWith("//") && true) return Astro.redirect(next);
+---
+<Base lang={lang} path="/" user={user} title={user.authenticated ? t("pick_title") : t("login")} noindex={true} admin={true}>
+  {user.authenticated ? (
+    <div class="form">{Astro.url.searchParams.get("reset") === "ok" && <p class="okmsg" role="status">{t("reset_ok")}</p>}{user.isAdmin && <p><a class="btn sm" href="/a3/">{t("moderation")}</a></p>}<h1 class="u-fs26">{t("pick_title")}</h1>
+      <div class="kpick">{KINDS.filter((k) => k !== "model" || user.isLab || user.isAdmin).map((k) => <a class={`k-${k}`} href={`/a2/new/${k}`} ><strong>{t("o_" + k)}</strong><span>{t("d_" + k)}</span></a>)}</div>
+    </div>
+  ) : (
+    <div class="authbox">
+      <h1>{t("login")}</h1>
+      {error && <p class="err" role="alert">{t("err_" + error)}</p>}
+      <form method="post" action="/api/auth/login">
+        <input type="hidden" name="lang" value={lang} /><input type="hidden" name="next" value={next || "/a2/"} />
+        <div class="field"><label for="u">{t("login_id")}</label><input id="u" name="username" autocomplete="username" required /></div>
+        <div class="field"><label for="p">{t("password")}</label><input id="p" name="password" type="password" autocomplete="current-password" required /></div>
+        <button class="btn primary" type="submit">{t("login")}</button>
+      </form>
+      <p class="note u-mt16"><a href="/a2/mot-de-passe-oublie">{t("forgot")}</a></p>
+      <p class="note">{t("no_account")} <a href={`/a2/inscription${next ? "?next=" + encodeURIComponent(next) : ""}`}>{t("signup")}</a></p>
+    </div>
+  )}
+</Base>

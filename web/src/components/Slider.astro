@@ -1,0 +1,29 @@
+---
+// Petit carrousel de la page d'accueil (bandeau bas). Son script est dans src/scripts/site.js.
+import { labsPath } from "../lib/paths.js";
+const { lang, t } = Astro.props;
+const SLIDES = [
+  // Modèles, Serveurs MCP, Datasets : déjà dans les onglets juste en dessous, pas de lien
+  { k: "model", img: "/slides/modeles.webp", title: t("sl1_t"), text: t("sl1_p") },
+  { k: "tool", img: "/slides/outils.webp", title: t("sl2_t"), text: t("sl2_p") },
+  { k: "dataset", img: "/slides/datasets.webp", title: t("sl3_t"), text: t("sl3_p") },
+  { k: "context", img: "/slides/labs.webp", title: t("sl4_t"), text: t("sl4_p"), href: labsPath(lang), cta: "Labs" },
+];
+---
+<section class="slider" aria-roledescription="carousel" aria-label={t("sl_label")}>
+  <div class="slides" id="slides">
+    {SLIDES.map((s, i) => {
+      const Tag = s.href ? "a" : "div";
+      return (
+        <Tag class={`slide slide-img k-${s.k}`} href={s.href}  aria-roledescription="slide" aria-label={`${i + 1} / ${SLIDES.length}`}>
+          <img src={s.img} alt="" width="1600" height="360" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+          <div class="slide-text"><strong>{s.title}</strong><span>{s.text}</span></div>
+          {s.href && <span class="slide-cta">{s.cta} →</span>}
+        </Tag>
+      );
+    })}
+  </div>
+  <div class="dots" role="tablist">
+    {SLIDES.map((_, i) => <button type="button" class="dot" data-i={i} aria-label={`${i + 1}`} aria-current={i === 0 ? "true" : "false"}></button>)}
+  </div>
+</section>

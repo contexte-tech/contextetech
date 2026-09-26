@@ -1,0 +1,42 @@
+---
+// Annuaire des Labs : équipes vérifiées par l'administrateur, seules autorisées à publier des modèles.
+import Base from "../../layouts/Base.astro";
+import Breadcrumb from "../../components/Breadcrumb.astro";
+
+import { isLang, translator } from "../../lib/i18n.js";
+import { api, cachePublic, site, b64 } from "../../lib/server.js";
+import { kindPath, labPath, labsPath, pre } from "../../lib/paths.js";
+
+const { lang } = Astro.params;
+if (!isLang(lang)) return Astro.rewrite("/404");
+const t = translator(lang, site().name);
+const [data, user] = await Promise.all([api(Astro, "/api/users"), api(Astro, "/api/auth/me")]);
+cachePublic(Astro, 300);
+const LANGS_ = ["fr", "en", "es", "de", "it"];
+---
+<Base lang={lang} path="/labs" paths={Object.fromEntries(LANGS_.map((l) => [l, labsPath(l)]))} user={user} title="Labs" description={t("labs_desc")}>
+  <div class="detail labs">
+    <header class="os-hero">
+      <p class="os-kicker">Labs</p>
+      <Breadcrumb lang={lang} t={t} items={[["Labs", labsPath(lang)]]} />
+      <h1>{t("labs_title")}</h1>
+      <p class="os-lead">{t("labs_intro")}</p>
+      <p class="u-mt14"><a class="btn sm" href={kindPath(lang, "model")}>{t("k_model")} →</a>
+        {user.authenticated && !user.isLab && <span class="btn sm u-ml6" role="link" tabindex="0" data-o={b64("/a2/profil?s=lab")}>{t("lab_req_btn")}</span>}</p>
+    </header>
+    {data.items.length === 0 ? <p class="note">{t("labs_none")}</p> : (
+      <div class="list">
+        {data.items.map((l) => (
+          <a class="card k-model" href={labPath(lang, l.name)}>
+            <div class="id">{l.name}<span class="labbadge">Lab</span></div>
+            {l.bio && <p>{l.bio.slice(0, 160)}{l.bio.length > 160 ? "…" : ""}</p>}
+            <div class="cmeta note">
+              <span>{t("labs_models", { n: l.models })}</span>
+              {(l.city || l.country) && <span> · 📍 {[l.city, l.country].filter(Boolean).join(", ")}</span>}
+            </div>
+          </a>
+        ))}
+      </div>
+    )}
+  </div>
+</Base>

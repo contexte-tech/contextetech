@@ -1,0 +1,325 @@
+[
+ {
+  "id": "contextetech--diagnostic-pannes-fr",
+  "kind": "context",
+  "name": "diagnostic-pannes-fr",
+  "authorHandle": "contextetech",
+  "sub": "fewshot",
+  "clang": "fr",
+  "license": "CC-BY-4.0",
+  "tags": [
+   "diagnostic",
+   "json"
+  ],
+  "description": "Diagnostic structuré d'une panne à partir d'une description libre : causes probables classées, vérifications à faire.",
+  "data": {
+   "system": "Tu es un technicien diagnostiqueur. À partir d'un symptôme, renvoie uniquement un JSON {\"causes\":[{\"cause\":str,\"probabilite\":\"haute|moyenne|faible\"}],\"verifications\":[str]}.",
+   "knowledge": "",
+   "examples": [
+    {
+     "input": "Ma moto cale au ralenti quand le moteur est chaud.",
+     "output": "{\"causes\":[{\"cause\":\"Ralenti mal réglé\",\"probabilite\":\"haute\"},{\"cause\":\"Prise d'air au collecteur\",\"probabilite\":\"moyenne\"}],\"verifications\":[\"Contrôler le régime de ralenti à chaud\",\"Pulvériser du nettoyant autour des pipes d'admission\"]}"
+    },
+    {
+     "input": "Le lave-linge ne vidange plus, l'eau reste dans le tambour.",
+     "output": "{\"causes\":[{\"cause\":\"Filtre de pompe obstrué\",\"probabilite\":\"haute\"},{\"cause\":\"Pompe de vidange HS\",\"probabilite\":\"moyenne\"}],\"verifications\":[\"Nettoyer le filtre de pompe\",\"Écouter si la pompe tourne en mode vidange\"]}"
+    }
+   ],
+   "version": "1.1",
+   "changelog": "1.1 — Ajout des pannes de lave-linge.\n1.0 — Première version.",
+   "tests": [
+    {
+     "model": "claude-sonnet-5",
+     "date": "2026-09-20",
+     "result": "pass",
+     "score": 92,
+     "note": ""
+    },
+    {
+     "model": "qwen-3.8-8b",
+     "date": "2026-09-21",
+     "result": "partial",
+     "score": 71,
+     "note": "Oublie parfois la cause la plus probable."
+    }
+   ]
+  }
+ },
+ {
+  "id": "contextetech--classif-sentiment-avis",
+  "kind": "context",
+  "name": "classif-sentiment-avis",
+  "authorHandle": "contextetech",
+  "sub": "fewshot",
+  "clang": "fr",
+  "license": "MIT",
+  "tags": [
+   "classification",
+   "nlp"
+  ],
+  "description": "Classe un avis client en positif / neutre / négatif avec l'aspect concerné.",
+  "data": {
+   "system": "Réponds sur une seule ligne au format : sentiment | aspect",
+   "knowledge": "",
+   "examples": [
+    {
+     "input": "Livraison rapide mais la pièce était rayée.",
+     "output": "négatif | état du produit"
+    },
+    {
+     "input": "Conforme à la description, rien à dire.",
+     "output": "neutre | conformité"
+    },
+    {
+     "input": "Super vendeur, très réactif au téléphone !",
+     "output": "positif | service client"
+    }
+   ]
+  }
+ },
+ {
+  "id": "contextetech--resume-ticket-support",
+  "kind": "prompt",
+  "name": "resume-ticket-support",
+  "authorHandle": "contextetech",
+  "sub": "",
+  "clang": "fr",
+  "license": "MIT",
+  "tags": [
+   "support",
+   "resume"
+  ],
+  "description": "Résume un ticket client pour un technicien, avec niveau d'urgence.",
+  "data": {
+   "template": "Tu résumes des tickets pour une équipe technique {{produit}}.\n\nTicket :\n\"\"\"\n{{ticket}}\n\"\"\"\n\nRends :\n- Problème en une phrase\n- Étapes déjà tentées par le client\n- Urgence : basse, moyenne ou haute, avec la raison"
+  }
+ },
+ {
+  "id": "contextetech--pannes-moto-fr",
+  "kind": "dataset",
+  "name": "pannes-moto-fr",
+  "authorHandle": "contextetech",
+  "sub": "chat",
+  "clang": "fr",
+  "license": "CC-BY-4.0",
+  "tags": [
+   "diagnostic",
+   "moto"
+  ],
+  "description": "Symptômes de pannes moto et diagnostics, format chat, pour fine-tuner un assistant de diagnostic.",
+  "data": {
+   "jsonl": "{\"messages\":[{\"role\":\"user\",\"content\":\"La moto ne démarre pas, le démarreur claque mais ne tourne pas.\"},{\"role\":\"assistant\",\"content\":\"Cause probable : batterie faible ou cosses oxydées. Vérifier la tension au repos (>12,4 V), puis le relais de démarreur.\"}]}\n{\"messages\":[{\"role\":\"user\",\"content\":\"Le frein avant devient spongieux après quelques freinages.\"},{\"role\":\"assistant\",\"content\":\"Cause probable : air dans le circuit ou liquide ancien. Purger avec du DOT 4 neuf, vérifier les joints d'étrier.\"}]}"
+  }
+ },
+ {
+  "id": "contextetech--qwen7b-diag-qlora",
+  "kind": "lora",
+  "name": "qwen7b-diag-qlora",
+  "authorHandle": "contextetech",
+  "sub": "qlora",
+  "clang": "multi",
+  "license": "Apache-2.0",
+  "tags": [
+   "qwen",
+   "24go"
+  ],
+  "description": "QLoRA sur Qwen2.5-7B-Instruct pour le diagnostic de pannes, tient sur un GPU 24 Go.",
+  "data": {
+   "baseModel": "Qwen/Qwen2.5-7B-Instruct",
+   "r": 16,
+   "alpha": 32,
+   "dropout": 0.05,
+   "lr": 0.0002,
+   "epochs": 3,
+   "batch": 4,
+   "gradAcc": 4,
+   "seqLen": 2048,
+   "targets": [
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj",
+    "gate_proj",
+    "up_proj",
+    "down_proj"
+   ],
+   "datasetId": "contextetech--pannes-moto-fr",
+   "notes": "Point de départ standard pour un 7B en QLoRA."
+  }
+ },
+ {
+  "id": "contextetech--mcp-fichiers",
+  "kind": "tool",
+  "name": "mcp-fichiers",
+  "authorHandle": "contextetech",
+  "sub": "mcp",
+  "clang": "multi",
+  "license": "MIT",
+  "tags": [
+   "mcp",
+   "fichiers"
+  ],
+  "description": "Serveur MCP officiel pour lire et écrire des fichiers dans un dossier autorisé.",
+  "data": {
+   "toolName": "filesystem",
+   "transport": "stdio",
+   "command": "npx -y @modelcontextprotocol/server-filesystem /chemin/vers/dossier",
+   "url": "",
+   "env": [],
+   "notes": "Remplacer /chemin/vers/dossier par le dossier à exposer. Le modèle ne peut rien lire en dehors.",
+   "access": {
+    "read": true,
+    "write": true,
+    "network": false,
+    "exec": false
+   }
+  }
+ },
+ {
+  "id": "contextetech--agent-support-client",
+  "kind": "agent",
+  "name": "agent-support-client",
+  "authorHandle": "contextetech",
+  "sub": "",
+  "clang": "fr",
+  "license": "MIT",
+  "tags": [
+   "support",
+   "agent"
+  ],
+  "description": "Agent de support : comprend la demande, cherche dans la documentation, répond ou escalade vers un humain.",
+  "data": {
+   "instructions": "Tu es l'assistant du support client. Réponds poliment, en français, uniquement à partir de la documentation fournie. Si tu n'es pas sûr, propose de transmettre à un conseiller.",
+   "steps": [
+    "Reformuler la demande du client",
+    "Chercher la réponse dans la documentation",
+    "Répondre en citant la source",
+    "Escalader vers un humain si la réponse n'est pas trouvée"
+   ],
+   "framework": "claude-agent-sdk",
+   "mcpIds": [
+    "contextetech--mcp-fichiers"
+   ],
+   "contextIds": [
+    "contextetech--resume-ticket-support"
+   ],
+   "guardrails": "Ne jamais promettre de remboursement. Ne jamais demander de mot de passe ou de coordonnées bancaires."
+  }
+ },
+ {
+  "id": "contextetech--skill-compte-rendu",
+  "kind": "skill",
+  "name": "skill-compte-rendu",
+  "authorHandle": "contextetech",
+  "sub": "",
+  "clang": "fr",
+  "license": "MIT",
+  "tags": [
+   "redaction",
+   "reunion"
+  ],
+  "description": "Skill qui transforme des notes de réunion en compte rendu structuré : décisions, actions, responsables.",
+  "data": {
+   "skillName": "compte-rendu-reunion",
+   "whenToUse": "Quand l'utilisateur fournit des notes de réunion et demande un compte rendu ou une synthèse.",
+   "instructions": "# Compte rendu de réunion\n\n1. Lis les notes en entier.\n2. Rédige trois sections : Décisions, Actions (avec responsable et échéance), Points ouverts.\n3. Reste factuel : n'invente aucune décision.\n4. Termine par la date de la prochaine réunion si elle est mentionnée.",
+   "resources": ""
+  }
+ },
+ {
+  "id": "contextetech--eval-diagnostic-pannes",
+  "kind": "eval",
+  "name": "eval-diagnostic-pannes",
+  "authorHandle": "contextetech",
+  "sub": "",
+  "clang": "fr",
+  "license": "CC-BY-4.0",
+  "tags": [
+   "diagnostic",
+   "evaluation"
+  ],
+  "description": "Vérifie qu'un contexte de diagnostic renvoie bien les causes attendues sur des pannes courantes.",
+  "data": {
+   "cases": [
+    {
+     "input": "La moto ne démarre pas, le démarreur ne fait aucun bruit.",
+     "expected": "batterie"
+    },
+    {
+     "input": "Le lave-linge ne vidange plus.",
+     "expected": "filtre"
+    },
+    {
+     "input": "La voiture fume blanc au démarrage à froid.",
+     "expected": "joint de culasse"
+    }
+   ],
+   "metric": "contains",
+   "criteria": "La réponse doit citer la cause attendue parmi les causes probables.",
+   "threshold": 80,
+   "evaluatesId": "contextetech--diagnostic-pannes-fr"
+  }
+ },
+ {
+  "id": "contextetech--rag-documentation-interne",
+  "kind": "rag",
+  "name": "rag-documentation-interne",
+  "authorHandle": "contextetech",
+  "sub": "",
+  "clang": "fr",
+  "license": "MIT",
+  "tags": [
+   "rag",
+   "documentation"
+  ],
+  "description": "Pipeline RAG pour interroger une documentation interne en français, avec citations des sources.",
+  "data": {
+   "sources": "Pages de documentation au format Markdown ou PDF, mises à jour chaque nuit.",
+   "chunkSize": 800,
+   "chunkOverlap": 120,
+   "embedding": "multilingual-e5-large",
+   "vectorStore": "pgvector",
+   "topK": 6,
+   "reranker": "bge-reranker-v2-m3",
+   "promptTemplate": "Réponds à la question uniquement à partir des extraits ci-dessous. Cite la source de chaque information. Si la réponse n'y est pas, dis-le.\n\nExtraits :\n{{context}}\n\nQuestion : {{question}}"
+  }
+ },
+ {
+  "id": "contextetech--harness-projet-web",
+  "kind": "harness",
+  "name": "harness-projet-web",
+  "authorHandle": "contextetech",
+  "sub": "",
+  "clang": "fr",
+  "license": "MIT",
+  "tags": [
+   "claude-code",
+   "developpement"
+  ],
+  "description": "Configuration Claude Code pour un projet web : conventions, commandes autorisées, fichiers protégés.",
+  "data": {
+   "harness": "claude-code",
+   "instructions": "# Projet web\n\n- Lancer les tests avec `npm test` avant chaque proposition de commit.\n- Respecter le style existant (Prettier).\n- Ne jamais modifier les fichiers `.env`.",
+   "allow": [
+    "Bash(npm test)",
+    "Bash(npm run lint)",
+    "Read",
+    "Edit"
+   ],
+   "deny": [
+    "Read(.env)",
+    "Bash(git push)"
+   ],
+   "hooks": "",
+   "mcpIds": [
+    "contextetech--mcp-fichiers"
+   ],
+   "access": {
+    "read": true,
+    "write": true,
+    "network": false,
+    "exec": true
+   }
+  }
+ }
+]

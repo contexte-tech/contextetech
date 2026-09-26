@@ -1,0 +1,92 @@
+name: contextec
+
+x-env: &env
+  env_file: .env
+
+services:
+  api:
+    build: ./api
+    image: ${IMAGE_PREFIX:-contextec}/api:${IMAGE_TAG:-latest}
+    <<: *env
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    expose: ["8000"]
+
+  web:
+    build: ./web
+    image: ${IMAGE_PREFIX:-contextec}/web:${IMAGE_TAG:-latest}
+    <<: *env
+    environment:
+      API_INTERNAL_URL: http://api:8000
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    expose: ["4321"]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-lru"]
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      # :Z = étiquetage SELinux (Oracle Linux / RHEL)
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro,Z
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+
+  # Base locale de test (en production : Scaleway Managed PostgreSQL)
+  #   docker compose --profile local-db up -d
+  db:
+    image: postgres:16-alpine
+    profiles: ["local-db"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-contextec}
+      POSTGRES_USER: ${POSTGRES_USER:-contextec}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Modèle local pour le bac à sable (GPU NVIDIA)
+  #   docker compose --profile ollama up -d
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    restart: unless-stopped
+    volumes:
+      - ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  redis:
+  caddy_data:
+  caddy_config:
+  pgdata:
+  ollama:

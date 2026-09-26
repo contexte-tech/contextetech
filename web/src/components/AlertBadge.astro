@@ -1,0 +1,6 @@
+---
+// Niveau d'alerte 1-5 : gris, bleu, jaune, orange, rouge ; les raisons en infobulle
+const { level = 0, why = [] } = Astro.props;
+---
+{level > 0 ? <span class={`alert a${level}`} title={why.join(" · ")}>{level}</span> : <span class="note">—</span>}
+{level > 0 && why.length > 0 && <div class="alertwhy">{why.slice(0, 2).join(" · ")}</div>}

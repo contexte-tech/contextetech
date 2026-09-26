@@ -1,0 +1,25 @@
+---
+import Base from "../../../layouts/Base.astro";
+import Breadcrumb from "../../../components/Breadcrumb.astro";
+
+import { isLang, translator } from "../../../lib/i18n.js";
+import { legalHTML } from "../../../lib/legal.js";
+import { api, cachePublic, site } from "../../../lib/server.js";
+const { lang, page } = Astro.params;
+if (!isLang(lang) || !["mentions", "cgu"].includes(page)) return Astro.rewrite("/404");
+const S = site();
+const t = translator(lang, S.name);
+const user = await api(Astro, "/api/auth/me");
+cachePublic(Astro, 3600);
+const notice = lang !== "fr" ? t("legal_notice") : "";
+---
+{/* Textes juridiques rédigés en français et en anglais seulement : en es/de/it, la page reprend l'anglais,
+    sa canonique pointe donc vers la version anglaise (pas de doublon) */}
+<Base lang={lang} path={`/legal/${page}`} user={user} alternates={false}
+      canonicalPaths={Object.fromEntries(["fr", "en", "es", "de", "it"].map((l) => [l, `${l === "fr" ? "" : "/" + (l === "fr" ? "fr" : ["es", "de", "it"].includes(lang) ? "en" : l)}/legal/${page}`]))} title={t(page === "cgu" ? "legal_cgu" : "legal_m")} description={t(page === "cgu" ? "legal_cgu_desc" : "legal_m_desc")}>
+  <article class="legal">
+    <Breadcrumb lang={lang} t={t} items={[[t(page === "cgu" ? "legal_cgu" : "legal_m"), Astro.url.pathname]]} />
+    {notice && <div class="banner">{notice}</div>}
+    <Fragment set:html={legalHTML(page, lang, S.legal, S.name).replace(/<h2>(.*?)<\/h2>/, "<h1>$1</h1>")} />
+  </article>
+</Base>

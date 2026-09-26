@@ -1,0 +1,61 @@
+---
+// Profil public d'un auteur ou d'un membre : ses publications et son activité.
+import Base from "../../../layouts/Base.astro";
+import Breadcrumb from "../../../components/Breadcrumb.astro";
+
+import Card from "../../../components/Card.astro";
+import { LANGS, fmtNum, isLang, translator } from "../../../lib/i18n.js";
+import { labPath, pre, profilePath } from "../../../lib/paths.js";
+import { api, cachePublic, site, b64 } from "../../../lib/server.js";
+
+const { lang, name } = Astro.params;
+if (!isLang(lang)) return Astro.rewrite("/404");
+const t = translator(lang, site().name);
+const [p, user] = await Promise.all([api(Astro, `/api/users/${encodeURIComponent(name)}`), api(Astro, "/api/auth/me")]);
+if (!p) return Astro.rewrite("/404");
+// Un Lab vit sous /labs/<nom> ; un simple membre sous /profil/<nom>
+const own = p.isLab ? labPath : profilePath;
+if (!!Astro.locals.lab !== !!p.isLab) return Astro.redirect(own(lang, p.name), 301);
+cachePublic(Astro, 60);
+const since = p.createdAt ? new Intl.DateTimeFormat(lang, { dateStyle: "long" }).format(new Date(p.createdAt)) : "";
+// Compte officiel (administrateur) : présenté comme l'organisation qui édite le site
+const official = !!p.isAdmin;
+const jsonld = { "@context": "https://schema.org", "@type": "ProfilePage", mainEntity: { "@type": official ? "Organization" : "Person", name: p.name, description: p.bio || undefined, url: p.website || undefined, homeLocation: p.city || p.country ? { "@type": "Place", name: [p.city, p.country].filter(Boolean).join(", ") } : undefined } };
+---
+<Base lang={lang} path={own(lang, p.name).slice(pre(lang).length)} paths={Object.fromEntries(Object.keys(LANGS).map((l) => [l, own(l, p.name)]))} user={user} title={p.name} jsonld={jsonld}
+      description={p.bio ? p.bio.slice(0, 160) : t("u_desc", { u: p.name, n: p.resources.length })} noindex={p.resources.length === 0}>
+  <div class="detail">
+    <Breadcrumb lang={lang} t={t} items={[[p.name, Astro.url.pathname]]} />
+    <div class="dhead"><h1 class="crumb">{p.name}</h1>{official && <span class="type k-accent">{t("role_official")}</span>}{p.isLab && <span class="labbadge" title={t("lab_badge_h")}>Lab</span>}</div>
+    <div class="meta">
+      <span>{t("u_pubs", { n: p.resources.length })}</span>
+      <span>♥ {fmtNum(lang, p.likes)}</span>
+      <span>▶ {t("n_uses", { n: fmtNum(lang, p.uses) })}</span>
+      {p.member && <span>{t("u_comments", { n: p.comments })}</span>}
+      {since && <span>{t("member_since", { d: since })}</span>}
+    </div>
+    {p.bio && <p class="u-w65 u-pre u-m14t">{p.bio}</p>}
+    {(p.city || p.country || p.website) && (
+      <div class="meta u-mt8">
+        {(p.city || p.country) && <span>📍 {[p.city, p.country].filter(Boolean).join(", ")}</span>}
+        {p.website && <a href={p.website} target="_blank" rel="nofollow noopener noreferrer ugc">{p.website.replace(/^https?:\/\//, "").replace(/\/$/, "")} ↗</a>}
+      </div>
+    )}
+    {p.resources.length ? (
+      <div class="list u-mt18">{p.resources.map((it) => <Card it={it} lang={lang} t={t} />)}</div>
+    ) : (
+      <p class="note u-mt18">{t("u_none")}</p>
+    )}
+    {!official && !(user.authenticated && user.name === p.name) && (Astro.url.searchParams.get("signale") ? <p class="okmsg u-mt18">{t("rep_thanks")}</p> : (
+      <details class="note u-mt18"><summary>{t("rep_profile")}</summary>
+        <form method="post" action="/api/report" class="reportform">
+          <input type="hidden" name="target_type" value="user" /><input type="hidden" name="target_id" value={p.name} />
+          <input type="hidden" name="next" value={own(lang, p.name)} />
+          <input name="reason" maxlength="500" placeholder={t("rep_reason")} aria-label={t("rep_reason")} />
+          <button class="btn sm" type="submit">{t("report")}</button>
+        </form>
+      </details>
+    ))}
+    {user.authenticated && user.name === p.name && <p class="u-mt18"><span class="btn sm" role="link" tabindex="0" data-o={b64("/a2/profil")}>{t("profile")}</span></p>}
+  </div>
+</Base>

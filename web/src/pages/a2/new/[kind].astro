@@ -1,0 +1,38 @@
+---
+import Base from "../../../layouts/Base.astro";
+import ResourceForm from "../../../components/ResourceForm.svelte";
+import { CLANGS, KINDS } from "../../../lib/format.js";
+import { clangName, dict, translator } from "../../../lib/i18n.js";
+import { api, noCache, site } from "../../../lib/server.js";
+import { docsPath } from "../../../lib/paths.js";
+
+const lang = "fr";
+const { kind } = Astro.params;
+if (!KINDS.includes(kind)) return Astro.rewrite("/404");
+const S = site();
+const t = translator(lang, S.name);
+noCache(Astro);
+const user = await api(Astro, "/api/auth/me");
+if (!user.authenticated) return Astro.redirect(`/a2/?next=${encodeURIComponent(Astro.url.pathname + Astro.url.search)}`);
+// Publier un modèle : réservé aux Labs
+if (kind === "model" && !(user.isLab || user.isAdmin)) return Astro.redirect("/a2/profil?s=lab");
+
+const forkId = Astro.url.searchParams.get("fork");
+const initial = forkId ? await api(Astro, `/api/resources/${encodeURIComponent(forkId)}`) : null;
+const [cfg, dsList] = await Promise.all([
+  api(Astro, "/api/config"),
+  kind === "lora" || kind === "model" ? api(Astro, "/api/resources?kind=dataset&sort=recent") : Promise.resolve({ items: [] }),
+]);
+const knownTags = (await api(Astro, `/api/tags?kind=${kind}`)).items;
+const loras = kind === "model" ? (await api(Astro, "/api/resources?kind=lora&sort=recent")).items : [];
+const models = ["context", "prompt", "tool"].includes(kind) ? (await api(Astro, "/api/resources?kind=model&sort=recent")).items : [];
+const listOf = async (kk) => (await api(Astro, `/api/resources?kind=${kk}&sort=recent`)).items;
+const [mcps, contexts, evaluables] = kind === "harness" ? [await listOf("tool"), [], []]
+  : kind === "agent" ? [await listOf("tool"), await listOf("context"), []]
+  : kind === "eval" ? [[], [], await listOf("context,prompt,agent,skill,model,rag")] : [[], [], []];
+const clangNames = Object.fromEntries(CLANGS.map((c) => [c, clangName(lang, c)]));
+---
+<Base lang={lang} path={`/new/${kind}`} user={user} title={t("t_new", { k: t("o_" + kind) })} noindex={true} admin={true}>
+  <ResourceForm client:load kind={kind} initial={initial && initial.kind === kind ? initial : null} mode={initial ? "fork" : "new"}
+    lang={lang} s={dict(lang, S.name)} datasets={dsList.items} cfg={cfg} defaultHandle={user.name} clangNames={clangNames} isAdmin={!!user.isAdmin} knownTags={knownTags} loras={loras} models={models} mcps={mcps} contexts={contexts} evaluables={evaluables} />
+</Base>

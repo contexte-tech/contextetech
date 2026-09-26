@@ -1,0 +1,28 @@
+---
+// Nouveau mot de passe depuis le lien reçu par e-mail (le jeton est vérifié par l'API, usage unique).
+import Base from "../../layouts/Base.astro";
+import { translator } from "../../lib/i18n.js";
+import { api, noCache, site } from "../../lib/server.js";
+
+const lang = "fr";
+const t = translator(lang, site().name);
+noCache(Astro);
+const user = await api(Astro, "/api/auth/me");
+const error = Astro.url.searchParams.get("error");
+const token = Astro.url.searchParams.get("token") || "";
+---
+<Base lang={lang} path="/" user={user} title={t("reset_title")} noindex={true} admin={true}>
+  <div class="authbox">
+    <h1>{t("reset_title")}</h1>
+    {error && <p class="err" role="alert">{t("err_" + error)}</p>}
+    {token ? (
+      <form method="post" action="/api/auth/reset">
+        <input type="hidden" name="token" value={token} />
+        <div class="field"><label for="p">{t("pf_new")}</label><input id="p" name="password" type="password" minlength="10" autocomplete="new-password" required /></div>
+        <div class="field"><label for="p2">{t("password2")}</label><input id="p2" name="password2" type="password" minlength="10" autocomplete="new-password" required /></div>
+        <button class="btn primary" type="submit">{t("reset_btn")}</button>
+      </form>
+    ) : <p class="err" role="alert">{t("err_reset_invalid")}</p>}
+    <p class="note u-mt16"><a href="/a2/mot-de-passe-oublie">{t("forgot")}</a></p>
+  </div>
+</Base>

@@ -1,0 +1,120 @@
+---
+// Profil du membre (zone privée /a2/) : activité, mot de passe, suppression du compte.
+import Base from "../../layouts/Base.astro";
+import { KCOLOR } from "../../lib/format.js";
+import { ago, translator } from "../../lib/i18n.js";
+import { api, noCache, site } from "../../lib/server.js";
+import { profilePath, resourcePath } from "../../lib/paths.js";
+
+const lang = "fr";
+const t = translator(lang, site().name);
+noCache(Astro);
+const user = await api(Astro, "/api/auth/me");
+if (!user.authenticated) return Astro.redirect("/a2/?next=/a2/profil");
+const p = await api(Astro, "/api/profile");
+const m = Astro.url.searchParams.get("m");
+// Onglets de la page : ?s=profil|commentaires|likes|securite|compte
+const TABS = [["profil", t("profile")], ["commentaires", t("my_comments")], ["likes", t("my_likes")], ["securite", t("pf_password")], ["lab", "Lab"], ["compte", t("account")]];
+const s = TABS.some(([k]) => k === Astro.url.searchParams.get("s")) ? Astro.url.searchParams.get("s") : "profil";
+const since = new Intl.DateTimeFormat(lang, { dateStyle: "long" }).format(new Date(p.createdAt));
+---
+<Base lang={lang} path="/" user={user} title={t("profile")} noindex={true} admin={true}>
+  <div class="form profile">
+    <h1 class="h2">{p.name}</h1>
+    <p class="note">{t(p.isAdmin ? "role_admin" : "role_member")} · {t("member_since", { d: since })} · <a href={profilePath("fr", p.name)}>{t("u_public")}</a></p>
+
+    <nav class="tabs" role="tablist">
+      {TABS.map(([k, label]) => <a role="tab" aria-selected={s === k ? "true" : "false"} href={`/a2/profil?s=${k}`}>{label}{k === "commentaires" && p.comments.length > 0 && <span class="n"> {p.comments.length}</span>}{k === "likes" && p.likes.length > 0 && <span class="n"> {p.likes.length}</span>}</a>)}
+    </nav>
+    {m && <p class={m === "pw_ok" || m === "info_ok" || m === "lab_sent" ? "okmsg" : "err"} role="status">{t(["pw_ok", "pw_wrong", "admin_keep", "info_ok", "url_bad", "lab_sent"].includes(m) ? "pf_" + m : "err_" + m)}</p>}
+
+    {s === "profil" && (
+    <section class="block">
+      <form method="post" action="/api/profile/info" class="pform">
+        <div class="field"><label for="em">{t("email")} <span class="hint">{t("email_h")}</span></label><input id="em" name="email" type="email" maxlength="254" autocomplete="email" value={p.email} /></div>
+        <div class="field"><label for="bio">{t("pf_bio")} <span class="hint">{t("pf_bio_h")}</span></label>
+          <textarea id="bio" name="bio" maxlength="500">{p.bio}</textarea></div>
+        <div class="two">
+          <div class="field"><label for="cty">{t("pf_country")}</label><input id="cty" name="country" maxlength="60" value={p.country} autocomplete="country-name" /></div>
+          <div class="field"><label for="city">{t("pf_city")}</label><input id="city" name="city" maxlength="80" value={p.city} autocomplete="address-level2" /></div>
+        </div>
+        <div class="field"><label for="web">{t("pf_website")}</label><input id="web" name="website" type="url" maxlength="300" placeholder="https://" value={p.website} /></div>
+        <button class="btn primary sm" type="submit">{t("save")}</button>
+      </form>
+    </section>
+    )}
+    {s === "commentaires" && (
+    <section class="block">
+      {p.comments.length === 0 && <p class="note">{t("pf_no_comments")}</p>}
+      {p.comments.map((c) => (
+        <article class="comment">
+          <div class="cmeta"><a href={`${resourcePath("fr", c.kind, c.resourceId)}?tab=community`}><strong>{c.resource}</strong></a> · <span class="note">{ago(lang, c.createdAt)}</span>
+            <form method="post" action={`/api/comments/${c.id}/delete`} class="cdel">
+              <input type="hidden" name="next" value="/a2/profil?s=commentaires" /><button class="btn sm" type="submit">{t("delete")}</button>
+            </form>
+          </div>
+          <p>{c.body}</p>
+        </article>
+      ))}
+    </section>
+    )}
+    {s === "likes" && (
+    <section class="block">
+      {p.likes.length === 0 ? <p class="note">{t("pf_no_likes")}</p> : (
+        <div class="tags u-m0">{p.likes.map((l) => <a class={`tag k-${l.kind} u-bk`}  href={resourcePath("fr", l.kind, l.id)}>♥ {l.resource}</a>)}</div>
+      )}
+    </section>
+    )}
+    {s === "securite" && (
+    <section class="block">
+      <form method="post" action="/api/profile/password" class="pform">
+        <div class="field"><label for="o">{t("pf_old")}</label><input id="o" name="old" type="password" autocomplete="current-password" required /></div>
+        <div class="two">
+          <div class="field"><label for="n">{t("pf_new")}</label><input id="n" name="new" type="password" minlength="10" autocomplete="new-password" required /></div>
+          <div class="field"><label for="n2">{t("password2")}</label><input id="n2" name="new2" type="password" minlength="10" autocomplete="new-password" required /></div>
+        </div>
+        <button class="btn primary sm" type="submit">{t("save")}</button>
+      </form>
+    </section>
+    )}
+    {s === "lab" && (
+      <section class="block">
+        {p.isLab || p.isAdmin ? (
+          <Fragment><p class="okmsg">{t("lab_yes")}</p><p><a class="btn primary sm" href="/a2/new/model">{t("publish_in", { k: t("o_model") })}</a></p></Fragment>
+        ) : p.labRequested ? (
+          <p class="note">{t("lab_pending_me")}</p>
+        ) : (
+          <Fragment>
+            <p class="note u-w65">{t("lab_req_p")}</p>
+            <form method="post" action="/api/profile/lab" class="pform">
+              <div class="field"><label for="lab-m">{t("lab_motivation")}</label><textarea id="lab-m" name="motivation" maxlength="500" required></textarea></div>
+              <button class="btn primary sm" type="submit">{t("lab_req_btn")}</button>
+            </form>
+          </Fragment>
+        )}
+      </section>
+    )}
+    {s === "compte" && (
+      <Fragment>
+      <section class="block">
+        <h2 class="h4">API</h2>
+        <p class="note u-w65">{t("api_help")}</p>
+        <a class="btn sm" href="/api/docs" target="_blank" rel="noopener">{t("api_docs")} ↗</a>
+      </section>
+    <section class="block">
+      <form class="u-inline" method="post" action="/api/auth/logout"><input type="hidden" name="lang" value="fr" /><button class="btn sm" type="submit">{t("logout")}</button></form>
+    </section>
+    {!p.isAdmin && (
+      <section class="block danger">
+        <h2 class="h4">{t("pf_delete")}</h2>
+        <p class="note">{t("pf_delete_h")}</p>
+        <form method="post" action="/api/profile/delete" class="pform">
+          <div class="field"><label for="dp">{t("password")}</label><input id="dp" name="password" type="password" autocomplete="current-password" required /></div>
+          <button class="btn sm" type="submit">{t("pf_delete")}</button>
+        </form>
+      </section>
+    )}
+      </Fragment>
+    )}
+  </div>
+</Base>

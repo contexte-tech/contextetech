@@ -1,0 +1,30 @@
+---
+import { resourcePath } from "../lib/paths.js";
+import { HARNESSES, KCOLOR, VECTOR_STORES, author, subLabel, targetName } from "../lib/format.js";
+import { ago, clangName, fmtNum } from "../lib/i18n.js";
+const { it, lang, t } = Astro.props;
+const meta = [];
+if (subLabel(t, it)) meta.push(["type", subLabel(t, it)]);
+if (it.kind === "context" && it.examplesCount) meta.push(["", t("n_examples", { n: it.examplesCount })]);
+if (it.kind === "prompt") meta.push(["type", t("n_vars", { n: it.varsCount || 0 })]);
+if (it.kind === "dataset") meta.push(["", t("n_rows", { n: fmtNum(lang, it.rowCount) })]);
+if (it.kind === "lora") { meta.push(["", String(it.baseModel || "").split("/").pop()]); meta.push(["", `r=${it.r}`]); }
+if (it.kind === "model") { if (it.params) meta.push(["", it.params]); if (it.format) meta.push(["", it.format.toUpperCase()]); }
+if (it.kind === "agent") meta.push(["", t("n_steps", { n: it.stepsCount || 0 })]);
+if (it.kind === "skill" && it.skillName) meta.push(["", it.skillName]);
+if (it.kind === "eval") meta.push(["", t("n_cases", { n: it.casesCount || 0 })]);
+if (it.kind === "rag" && it.vectorStore) meta.push(["", VECTOR_STORES[it.vectorStore]?.startsWith("fam_") ? t(VECTOR_STORES[it.vectorStore]) : VECTOR_STORES[it.vectorStore]]);
+if (it.kind === "harness" && it.harness) meta.push(["", HARNESSES[it.harness]?.startsWith("fam_") ? t(HARNESSES[it.harness]) : HARNESSES[it.harness]]);
+if (it.testsCount) meta.push(["", t("n_tested", { n: it.testsPass, m: it.testsCount })]);
+if (it.kind === "tool") meta.push(["", it.toolName || ""]);
+if (it.targetFamily) meta.push(["", targetName(t, it.targetFamily)]);
+if (it.clang) meta.push(["", clangName(lang, it.clang)]);
+---
+<a class={`card k-${it.kind}`} data-clang={it.clang || ""} href={resourcePath(lang, it.kind, it.id)}>
+  <div class="id"><span>{author(it)} /</span> {it.name}</div>
+  <p>{it.description || t("no_desc")}</p>
+  <div class="meta">
+    {meta.map(([cls, v]) => <span class={cls}>{v}</span>)}
+    <span>♥ {fmtNum(lang, it.likes)}</span><span>▶ {fmtNum(lang, it.uses)}</span><span>{ago(lang, it.updatedAt)}</span>
+  </div>
+</a>

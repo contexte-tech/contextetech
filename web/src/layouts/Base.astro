@@ -1,0 +1,103 @@
+---
+import { pre } from "../lib/paths.js";
+// Polices servies par le site lui-même (/_astro/), jamais depuis un domaine externe
+import "@fontsource/instrument-sans/400.css";
+import "@fontsource/instrument-sans/500.css";
+import "@fontsource/instrument-sans/600.css";
+import "@fontsource/instrument-sans/700.css";
+import "@fontsource/jetbrains-mono/400.css";
+import "@fontsource/jetbrains-mono/500.css";
+import "../styles/global.css";
+// Polices visibles dès l'ouverture (texte, titres, logo) : préchargées pour ne pas attendre la lecture du CSS
+import fontText from "@fontsource/instrument-sans/files/instrument-sans-latin-400-normal.woff2?url";
+import fontSemi from "@fontsource/instrument-sans/files/instrument-sans-latin-600-normal.woff2?url";
+import fontBold from "@fontsource/instrument-sans/files/instrument-sans-latin-700-normal.woff2?url";
+import fontMono from "@fontsource/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2?url";
+import { LANGS, translator } from "../lib/i18n.js";
+import { site, b64 } from "../lib/server.js";
+
+const { lang, title, description, path = "/", user, noindex = false, jsonld = null, query = "", admin = false, paths = null, canonicalQuery = "", canonicalPaths = null, alternates = true } = Astro.props;
+// Adresse de cette page dans chaque langue (les slugs peuvent être traduits : /outils ↔ /en/tools)
+const hrefFor = (l) => (paths ? paths[l] : `${pre(l)}${path}`) + query;
+const S = site();
+const t = translator(lang, S.name);
+const fullTitle = title ? `${title} · ${S.name}` : `${S.name} — ${t("hero_h")}`;
+const desc = description || t("meta_desc");
+// Canonique : l'adresse propre de la page, sans ?tab / ?sort / filtres (seule la pagination reste)
+const cleanFor = (l) => (canonicalPaths ? canonicalPaths[l] : paths ? paths[l] : `${pre(l)}${path}`) + canonicalQuery;
+const canonical = `${S.origin}${cleanFor(lang)}`;
+// Préchargement : balises <link rel="preload"> et en-tête HTTP Link (lu par le navigateur avant le HTML)
+const PRELOAD_FONTS = [fontText, fontSemi, fontBold, fontMono];
+Astro.response.headers.append("Link", PRELOAD_FONTS.map((u) => `<${S.origin}${u}>; rel=preload; as=font; type="font/woff2"; crossorigin`).join(", "));
+// Liens vers l'espace membre (Connexion, Publier) : adresse en base64, décodée au clic, pour que les robots ne les suivent pas
+---
+<!doctype html>
+<html lang={lang}>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>{fullTitle}</title>
+  <meta name="description" content={desc} />
+  {/* Canonique et hreflang sur toutes les pages indexables ; une page noindex (404, espace membre) n'en a pas */}
+  {noindex ? <meta name="robots" content="noindex" /> : (
+    <Fragment>
+      <link rel="canonical" href={canonical} />
+      {alternates && Object.keys(LANGS).map((l) => <link rel="alternate" hreflang={l} href={`${S.origin}${cleanFor(l)}`} />)}
+      {alternates && <link rel="alternate" hreflang="x-default" href={`${S.origin}${cleanFor("fr")}`} />}
+    </Fragment>
+  )}
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content={S.name} />
+  <meta property="og:title" content={fullTitle} />
+  <meta property="og:description" content={desc} />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:image" content={`${S.origin}/${lang === "fr" ? "og" : "og-en"}.png`} />
+  <meta property="og:image:width" content="1200" /><meta property="og:image:height" content="630" />
+  <meta property="og:locale" content={{ fr: "fr_FR", en: "en_US", es: "es_ES", de: "de_DE", it: "it_IT" }[lang]} />
+  <meta name="theme-color" content="#FFFFFF" />
+  {PRELOAD_FONTS.map((u) => <link rel="preload" href={`${S.origin}${u}`} as="font" type="font/woff2" crossorigin />)}
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <!-- Thème choisi par le visiteur, appliqué avant l'affichage pour éviter un flash -->
+  <script is:inline src="/theme.js"></script>
+  {jsonld && <script type="application/ld+json" set:html={JSON.stringify(jsonld).replace(/</g, "\\u003c")} />}
+</head>
+<body>
+  <header class="top"><div class="wrap">
+    <a class="logo" href={`${pre(lang)}/`} aria-label={S.name}><span class="logo-brand"><span class="logo-mark">{"{ctx}"}</span><span class="logo-tech">tech</span></span><span class="logo-name">{S.name}</span></a>
+    <span class="spacer"></span>
+    {!admin && (
+      <nav class="langs" aria-label="Langue / Language">
+        {Object.keys(LANGS).map((l) => <a href={hrefFor(l)} hreflang={l} lang={l} title={LANGS[l]} aria-current={l === lang ? "true" : "false"}>{l.toUpperCase()}</a>)}
+      </nav>
+    )}
+    <button class="btn sm theme" type="button" id="theme-toggle" aria-label="Thème clair / sombre" title="Thème clair / sombre">◐</button>
+    <div class="auth">
+      {!user?.authenticated && !admin && <span class="btn sm" role="link" tabindex="0" data-o={b64("/a2/?next=")}>{t("login")}</span>}
+      {/* Compte : mène au profil (la déconnexion s'y trouve) */}
+      {user?.authenticated && <span class="btn sm account" role="link" tabindex="0" data-o={b64("/a2/profil")}>{t("account")}</span>}
+      {/* Pages du compte et de l'admin : bouton de déconnexion toujours visible */}
+      {admin && user?.authenticated && (
+        <form method="post" action="/api/auth/logout" class="logoutform">
+          <input type="hidden" name="lang" value={lang} />
+          <button class="btn sm" type="submit">{t("logout")}</button>
+        </form>
+      )}
+      {/* Publier mène à /a2/ : connexion si besoin, puis choix du type */}
+      <span class="btn primary sm" role="link" tabindex="0" data-o={b64("/a2/")}>{t("publish")}</span>
+    </div>
+  </div></header>
+  <main class="wrap"><slot /></main>
+  <footer class="foot"><div class="wrap">
+    <span>© {new Date().getFullYear()} {S.name}</span>
+    <a href={`${pre(lang)}/labs`}>Labs</a>
+    <a href={`${pre(lang)}/docs`}>{t("docs")}</a>
+    <a href={`${pre(lang)}/open-source`}>{t("os_link")}</a>
+    <a href={`${pre(lang)}/legal/cgu`}>{t("f_cgu")}</a>
+    <a href={`${pre(lang)}/legal/cgu#donnees`}>{t("f_data")}</a>
+    <a href={`${pre(lang)}/legal/mentions`}>{t("f_mentions")}</a>
+  </div></footer>
+  <script src="../scripts/site.js"></script>
+</body>
+</html>

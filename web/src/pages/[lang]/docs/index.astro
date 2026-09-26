@@ -1,0 +1,32 @@
+---
+// Sommaire de la documentation.
+import Base from "../../../layouts/Base.astro";
+import Breadcrumb from "../../../components/Breadcrumb.astro";
+
+import { FAMILIES, KCOLOR } from "../../../lib/format.js";
+import { docOf } from "../../../lib/docs.js";
+import { LANGS, isLang, translator } from "../../../lib/i18n.js";
+import { docsPath } from "../../../lib/paths.js";
+import { api, cachePublic, site } from "../../../lib/server.js";
+
+const { lang } = Astro.params;
+if (!isLang(lang)) return Astro.rewrite("/404");
+const t = translator(lang, site().name);
+const user = await api(Astro, "/api/auth/me");
+cachePublic(Astro, 3600);
+---
+<Base lang={lang} path="/docs" paths={Object.fromEntries(Object.keys(LANGS).map((l) => [l, docsPath(l)]))} user={user} title={t("h1_docs")} description={t("doc_intro")}>
+  <div class="detail docpage">
+    <header class="os-hero"><Breadcrumb lang={lang} t={t} items={[[t("docs"), docsPath(lang)]]} /><h1>{t("h1_docs")}</h1><p class="os-lead">{t("doc_intro")}</p></header>
+    {FAMILIES.map(([fam, ks]) => (
+      <section class="block">
+        <h2 class="h4">{t(fam)} <span class="note u-fw400">— {t(fam + "_h")}</span></h2>
+        <div class="list">{ks.map((k) => (
+          <a class={`card k-${k}`}  href={docsPath(lang, k)}>
+            <div class="id u-cc">{t("k_" + k)}</div><p class="u-m6t">{docOf(lang, k).what.split(". ")[0]}.</p>
+          </a>
+        ))}</div>
+      </section>
+    ))}
+  </div>
+</Base>

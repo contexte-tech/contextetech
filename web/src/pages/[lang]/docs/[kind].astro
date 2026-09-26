@@ -1,0 +1,38 @@
+---
+// Documentation d'un type de fiche.
+import Base from "../../../layouts/Base.astro";
+import Breadcrumb from "../../../components/Breadcrumb.astro";
+
+import { KCOLOR, KINDS } from "../../../lib/format.js";
+import { docOf } from "../../../lib/docs.js";
+import { LANGS, isLang, translator } from "../../../lib/i18n.js";
+import { docsPath, kindOfSlug, kindPath, pre } from "../../../lib/paths.js";
+import { api, cachePublic, site, b64 } from "../../../lib/server.js";
+
+const { lang, kind: slug } = Astro.params;
+if (!isLang(lang)) return Astro.rewrite("/404");
+const kind = kindOfSlug(lang, slug);
+if (!kind) return Astro.rewrite("/404");
+const t = translator(lang, site().name);
+const d = docOf(lang, kind);
+const user = await api(Astro, "/api/auth/me");
+cachePublic(Astro, 3600);
+const title = t("dq_" + kind);
+const canPublish = user.authenticated && (kind !== "model" || user.isLab || user.isAdmin);
+---
+<Base lang={lang} path={docsPath(lang, kind).slice(pre(lang).length)} paths={Object.fromEntries(Object.keys(LANGS).map((l) => [l, docsPath(l, kind)]))} user={user} title={title} description={d.what.slice(0, 155)}>
+  <article class={`detail kinded docpage k-${kind}`} >
+    <header class="fhead">
+      <Breadcrumb lang={lang} t={t} items={[[t("docs"), docsPath(lang)], [t("k_" + kind), docsPath(lang, kind)]]} />
+      <h1 class="h2 u-m6t">{t("dq_" + kind)}</h1>
+    </header>
+    <nav class="docnav">{KINDS.map((k) => <a class={`k-${k}`} href={docsPath(lang, k)}  aria-current={k === kind ? "page" : undefined}>{t("k_" + k)}</a>)}</nav>
+    <section class="block"><h2 class="h4">{t("doc_what")}</h2><p class="doclead">{d.what}</p></section>
+    <section class="block"><h2 class="h4">{t("doc_when")}</h2><ul>{d.when.map((w) => <li>{w}</li>)}</ul></section>
+    <section class="block"><h2 class="h4">{t("doc_fields")}</h2>
+      <div class="tscroll"><table class="rows"><tbody>{d.fields.map(([a, b]) => <tr><th>{a}</th><td>{b}</td></tr>)}</tbody></table></div></section>
+    <section class="block"><h2 class="h4">{t("doc_use")}</h2><p>{d.use}</p></section>
+    <p class="docactions"><a class="btn" href={kindPath(lang, kind)}>{t("doc_browse", { k: t("k_" + kind) })} →</a>
+      {canPublish && <span class="btn primary" role="link" tabindex="0" data-o={b64(`/a2/new/${kind}`)}>{t("publish_in", { k: t("o_" + kind) })}</span>}</p>
+  </article>
+</Base>

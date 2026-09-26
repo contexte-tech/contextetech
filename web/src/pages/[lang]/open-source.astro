@@ -1,0 +1,82 @@
+---
+// Page « Open source » : les technologies qui font tourner le site, en texte (sans liens externes).
+import Base from "../../layouts/Base.astro";
+import Breadcrumb from "../../components/Breadcrumb.astro";
+
+import { isLang, translator } from "../../lib/i18n.js";
+import { api, cachePublic, site } from "../../lib/server.js";
+
+const { lang } = Astro.params;
+if (!isLang(lang)) return Astro.rewrite("/404");
+const S = site();
+const t = translator(lang, S.name);
+const user = await api(Astro, "/api/auth/me");
+cachePublic(Astro, 3600);
+
+// Texte d'explication de chaque catégorie, puis ses outils : [nom, clé de description, licence]
+const TEXT = { os_front: "os_s1", os_back: "os_s2", os_data: "os_s3", os_ai: "os_s5", os_infra: "os_s6" };
+const GROUPS = [
+  ["os_front", [
+    ["Astro", "os_astro", "MIT"],
+    ["Svelte", "os_svelte", "MIT"],
+    ["Instrument Sans", "os_font", "OFL-1.1"],
+    ["JetBrains Mono", "os_font_mono", "OFL-1.1"],
+    ["Fontsource", "os_fontsource", "MIT"],
+  ]],
+  ["os_back", [
+    ["Python", "os_python", "PSF"],
+    ["FastAPI", "os_fastapi", "MIT"],
+    ["Uvicorn", "os_uvicorn", "BSD-3"],
+    ["Pydantic", "os_pydantic", "MIT"],
+    ["SQLAlchemy", "os_sqlalchemy", "MIT"],
+    ["Alembic", "os_alembic", "MIT"],
+    ["asyncpg", "os_asyncpg", "Apache-2.0"],
+    ["HTTPX", "os_httpx", "BSD-3"],
+  ]],
+  ["os_data", [
+    ["PostgreSQL", "os_postgres", "PostgreSQL"],
+    ["Redis", "os_redis", "RSALv2 / SSPL"],
+    ["boto3", "os_boto3", "Apache-2.0"],
+  ]],
+  ["os_infra", [
+    ["Caddy", "os_caddy", "Apache-2.0"],
+    ["Docker", "os_docker", "Apache-2.0"],
+    ["Oracle Linux", "os_linux", "GPL"],
+    ["Bunny", "os_bunny", ""],
+  ]],
+  ["os_ai", [
+    ["Anthropic SDK", "os_anthropic", "MIT"],
+    ["Model Context Protocol", "os_mcp", "MIT"],
+    ["Ollama", "os_ollama", "MIT"],
+  ]],
+];
+---
+<Base lang={lang} path="/open-source" user={user} title={t("os_title")} description={t("os_desc")}>
+  <article class="os">
+    <header class="os-hero">
+      <p class="os-kicker">{t("os_title")}</p>
+      <Breadcrumb lang={lang} t={t} items={[[t("os_title"), Astro.url.pathname]]} />
+      <h1>{t("os_title")}</h1>
+      <p class="os-lead">{t("os_intro")}</p>
+    </header>
+
+    {GROUPS.map(([g, items]) => (
+      <section class="os-sec">
+        <div class="os-text">
+          <p class="os-kicker">{t(g)}</p>
+          {TEXT[g] ? <Fragment><h2>{t(TEXT[g] + "_h")}</h2><p>{t(TEXT[g] + "_p")}</p></Fragment> : <h2>{t(g)}</h2>}
+        </div>
+        <ul class="os-tools">
+          {items.map(([name, key, lic]) => (
+            <li><span class="os-name">{name}</span><span class="os-role">{t(key)}</span>{lic && <span class="os-lic">{lic}</span>}</li>
+          ))}
+        </ul>
+      </section>
+    ))}
+
+    <section class="os-sec">
+      <div class="os-text"><p class="os-kicker">{t("os_s4_h")}</p><h2>{t("os_s4_h")}</h2><p>{t("os_s4_p")}</p></div>
+      <div class="os-text"><p class="os-kicker">{t("os_host")}</p><h2>{t("os_host")}</h2><p>{t("os_host_p")}</p></div>
+    </section>
+  </article>
+</Base>

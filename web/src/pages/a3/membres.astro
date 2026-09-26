@@ -1,0 +1,94 @@
+---
+// Zone administrateur : membres. Désapprouver un profil le rend invisible (404, hors sitemap) sans supprimer le compte.
+import Base from "../../layouts/Base.astro";
+import AlertBadge from "../../components/AlertBadge.astro";
+import { translator } from "../../lib/i18n.js";
+import { api, noCache, site } from "../../lib/server.js";
+import { profilePath } from "../../lib/paths.js";
+
+const lang = "fr";
+const t = translator(lang, site().name);
+noCache(Astro);
+const user = await api(Astro, "/api/auth/me");
+if (!user.authenticated) return Astro.redirect("/a2/?next=/a3/membres");
+if (!user.isAdmin) return Astro.redirect("/a2/");
+const u = Astro.url.searchParams;
+const status = ["all", "visible", "hidden", "lab"].includes(u.get("s")) ? u.get("s") : "all";
+const q = (u.get("q") || "").slice(0, 80);
+// Filtre et tri par niveau d'alerte : ?min=3, ?tri=alerte
+const min = Math.max(0, Math.min(5, parseInt(u.get("min") || "0", 10) || 0));
+const tri = u.get("tri") === "alerte" ? "alerte" : "date";
+const data = await api(Astro, `/api/admin/users?status=${status}&q=${encodeURIComponent(q)}&min=${min}`);
+if (tri === "alerte") data.items.sort((a, b) => b.alert - a.alert);
+const here = `/a3/membres?s=${status}${q ? "&q=" + encodeURIComponent(q) : ""}${min ? "&min=" + min : ""}${tri === "alerte" ? "&tri=alerte" : ""}`;
+// Âge court : 17 min, 1 h, 1 j, 3 sem
+const age = (ms) => {
+  const m = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  return m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)} h` : m < 10080 ? `${Math.round(m / 1440)} j` : `${Math.round(m / 10080)} sem`;
+};
+const TABS = [["all", t("mod_all"), data.counts.visible + data.counts.hidden], ["visible", t("mod_visible"), data.counts.visible], ["hidden", t("mod_hidden"), data.counts.hidden], ["lab", t("lab_requests"), data.counts.lab]];
+---
+<Base lang={lang} path="/" user={user} title={t("members")} noindex={true} admin={true}>
+  <div class="moderation">
+    <h1 class="h2">{t("members")}</h1>
+    <nav class="tabs u-mb10" role="tablist">
+      <a role="tab" aria-selected="false" href="/a3/">{t("moderation")}</a>
+      <a role="tab" aria-selected="true" href="/a3/membres">{t("members")}</a>
+      <a role="tab" aria-selected="false" href="/a3/tags">{t("tags_admin")}</a>
+    </nav>
+    <p class="note">{t("mem_help")}</p>
+    <nav class="tabs" role="tablist">
+      {TABS.map(([k, label, n]) => <a role="tab" aria-selected={status === k ? "true" : "false"} href={`/a3/membres?s=${k}`}>{label}{n > 0 && <span class="n"> {n}</span>}</a>)}
+    </nav>
+    <form method="get" action="/a3/membres" class="modsearch">
+      <input type="hidden" name="s" value={status} />
+      {min > 0 && <input type="hidden" name="min" value={min} />}
+      <input type="search" name="q" value={q} placeholder={t("mem_search")} aria-label={t("mem_search")} />
+    </form>
+    <div class="alertfilter"><span class="note">{t("al_filter")}</span>
+      {[0, 2, 3, 4, 5].map((n) => <a class={min === n ? "btn sm primary" : "btn sm"} href={`/a3/membres?s=${status}${n ? "&min=" + n : ""}${tri === "alerte" ? "&tri=alerte" : ""}`}>{n ? "≥ " + n : t("mod_all")}</a>)}
+      <a class="btn sm" href={`/a3/membres?s=${status}${min ? "&min=" + min : ""}${tri === "alerte" ? "" : "&tri=alerte"}`}>{t(tri === "alerte" ? "al_sort_date" : "al_sort")}</a>
+    </div>
+    {data.items.length === 0 ? <p class="note">{t("no_results")}</p> : (
+      <div class="tscroll"><table class="rows modtable">
+        <thead><tr><th>{t("al_col")}</th><th>{t("username")}</th><th>{t("pf_bio")}</th><th>{t("mod_date")}</th><th>{t("u_pubs_h")}</th><th>Lab</th><th></th></tr></thead>
+        <tbody>{data.items.map((m) => (
+          <tr class={m.hidden ? "is-hidden" : ""}>
+            <td><AlertBadge level={m.alert} why={m.why} /></td>
+            <td><a href={profilePath(lang, m.name)}>{m.name}</a>{m.isAdmin && <span class="note"> · {t("role_admin")}</span>}</td>
+            <td class="note u-w320">{m.bio.slice(0, 120)}{m.website && <Fragment><br />{m.website}</Fragment>}</td>
+            <td class="note">{age(m.createdAt)}</td>
+            <td class="note">{m.resources} / {m.comments}</td>
+            <td>
+              {m.isAdmin ? <span class="note">—</span> : m.isLab ? (
+                <form method="post" action={`/api/admin/users/${encodeURIComponent(m.name)}/lab`} class="labform">
+                  <span class="labbadge u-m0">Lab</span>
+                  <input type="hidden" name="action" value="revoke" /><input type="hidden" name="next" value={here} />
+                  <button class="btn sm icon" type="submit" title={t("lab_revoke")} aria-label={t("lab_revoke")}>✕</button>
+                </form>
+              ) : m.labRequested ? (
+                <div>
+                  <div class="alertwhy u-w260">{m.labRequest}</div>
+                  <form method="post" action={`/api/admin/users/${encodeURIComponent(m.name)}/lab`} class="labform">
+                    <input type="hidden" name="next" value={here} />
+                    <button class="btn sm icon st-visible" name="action" value="approve" type="submit" title={t("lab_approve")} aria-label={t("lab_approve")}>✓</button>
+                    <button class="btn sm icon st-hidden" name="action" value="refuse" type="submit" title={t("lab_refuse")} aria-label={t("lab_refuse")}>✕</button>
+                  </form>
+                </div>
+              ) : <form method="post" action={`/api/admin/users/${encodeURIComponent(m.name)}/lab`} class="labform">
+                    <input type="hidden" name="action" value="approve" /><input type="hidden" name="next" value={here} />
+                    <button class="btn sm" type="submit" title={t("lab_approve")}>+ Lab</button>
+                  </form>}
+            </td>
+            <td>{!m.isAdmin && (
+              <form method="post" action={`/api/admin/users/${encodeURIComponent(m.name)}/visibility`}>
+                <input type="hidden" name="hidden" value={m.hidden ? "0" : "1"} /><input type="hidden" name="next" value={here} />
+                <button class={m.hidden ? "btn sm icon st-hidden" : "btn sm icon st-visible"} type="submit" title={t(m.hidden ? "mod_approve" : "mod_reject")} aria-label={t(m.hidden ? "mod_approve" : "mod_reject")}>{m.hidden ? "✓" : "⊘"}</button>
+              </form>
+            )}</td>
+          </tr>
+        ))}</tbody>
+      </table></div>
+    )}
+  </div>
+</Base>

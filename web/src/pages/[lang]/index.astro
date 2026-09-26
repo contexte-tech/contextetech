@@ -1,0 +1,172 @@
+---
+import { pre } from "../../lib/paths.js";
+import Base from "../../layouts/Base.astro";
+import Card from "../../components/Card.astro";
+import Slider from "../../components/Slider.astro";
+import Breadcrumb from "../../components/Breadcrumb.astro";
+
+import { FAMILIES, KEYWORDS, KINDS, KCOLOR, SUB, TARGET_FAMILIES, targetName } from "../../lib/format.js";
+import { LIST_KEYS as L_KEYS, docsPath, familyPath, homePath, kindPath, listPath, resourcePath } from "../../lib/paths.js";
+import { LANGS } from "../../lib/i18n.js";
+import { clangName, isLang, translator } from "../../lib/i18n.js";
+import { api, cachePublic, site, b64 } from "../../lib/server.js";
+
+const { lang } = Astro.params;
+if (!isLang(lang)) return Astro.rewrite("/404");
+const t = translator(lang, site().name);
+
+const u = Astro.url.searchParams;
+// Filtres lus dans l'adresse par le middleware (/outils/serveur-mcp/tri/recents…) ; seule la recherche reste en ?q=
+const L0 = Astro.locals.list || {};
+const f = {
+  kind: KINDS.includes(L0.kind) ? L0.kind : "context",
+  sub: L0.sub || "", target: L0.target || "", tag: L0.tag || "", clang: Astro.locals.homeClang || L0.clang || "",
+  q: (u.get("q") || "").slice(0, 80),
+  sort: ["likes", "uses", "recent"].includes(L0.sort) ? L0.sort : "likes",
+  page: Math.max(1, Math.min(500, L0.page || 1)),
+};
+// Lien vers la même liste avec des filtres modifiés (retour en page 1)
+const link = (o = {}, l = lang) => listPath(l, { ...f, page: 1, ...o }) + (f.q && !("q" in o) ? `?q=${encodeURIComponent(f.q)}` : "");
+const apiQs = new URLSearchParams({ kind: Astro.locals.family ? (FAMILIES.find(([fm]) => fm === Astro.locals.family) || [, []])[1].join(",") : Astro.locals.home ? "all" : f.kind, sub: f.sub, target: f.target, tag: f.tag, clang: f.clang, q: f.q, sort: f.sort, page: String(f.page) });
+const [list, facets, user] = await Promise.all([
+  api(Astro, `/api/resources?${apiQs}`),
+  api(Astro, `/api/facets?kind=${Astro.locals.home ? "all" : f.kind}`),
+  api(Astro, "/api/auth/me"),
+]);
+cachePublic(Astro, 60);
+const sf = SUB[f.kind];
+const pages = Math.max(1, Math.ceil(list.total / list.pageSize));
+const filtered = f.sub || f.target || f.tag || f.clang || f.q;
+const home = !!Astro.locals.home;
+// Page de famille (/usage…) : même présentation que l'accueil, limitée aux types de la famille
+const family = Astro.locals.family || "";
+const famKinds = family ? (FAMILIES.find(([fm]) => fm === family) || [, []])[1] : [];
+const homeFiltered = home && !!f.clang;
+// Titre de la page (H1 hors accueil) et description pour Google
+const heading = [f.tag && `#${f.tag}`, f.sub && sf && t(sf.opts[f.sub]), t("k_" + f.kind), f.target && t("for_model", { m: targetName(t, f.target) })].filter(Boolean).join(" · ");
+// H1 SEO : titre riche en mots-clés quand le catalogue n'est pas filtré
+const h1 = !f.tag && !f.sub && !f.target ? t("h1_" + f.kind) : heading;
+// Lien de filtre : en clair s'il mène à une page indexable, en base64 sinon, pour éviter les robots
+const lk = (href, indexable) => (indexable ? { href } : { role: "link", tabindex: "0", "data-o": b64(href) });
+const metaDesc = home ? t("meta_desc") : `${heading} — ${t("d_" + f.kind)}`;
+const S0 = site();
+const jsonld = home ? {
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "WebSite", name: S0.name, url: `${S0.origin}/`, inLanguage: lang },
+    { "@type": "Organization", name: S0.name, url: `${S0.origin}/`, logo: `${S0.origin}/og.png` },
+  ],
+} : {
+  "@context": "https://schema.org", "@type": "CollectionPage", name: heading, description: t("d_" + f.kind), keywords: (KEYWORDS[f.kind] || []).join(", "),
+  url: `${S0.origin}${listPath(lang, { ...f, sort: "likes", page: 1 })}`,
+  mainEntity: { "@type": "ItemList", numberOfItems: list.total,
+    itemListElement: list.items.map((it, i) => ({ "@type": "ListItem", position: i + 1, url: `${S0.origin}${resourcePath(lang, it.kind, it.id)}`, name: it.name })) },
+};
+---
+<Base lang={lang} path={home ? "/" : listPath(lang, f).slice(pre(lang).length)} paths={Object.fromEntries(Object.keys(LANGS).map((l) => [l, family ? familyPath(l, family) : home ? (f.clang ? `${homePath(l)}${L_KEYS[l].clang}/${f.clang}` : homePath(l)) : listPath(l, f)]))}
+      canonicalPaths={Object.fromEntries(Object.keys(LANGS).map((l) => [l, family ? familyPath(l, family) : home ? homePath(l) : listPath(l, { ...f, sort: "likes" })]))}
+      query={f.q ? `?q=${encodeURIComponent(f.q)}` : ""} user={user}
+      title={family ? t("h1_" + family) : home ? "" : h1 === heading ? heading : t("ti_" + f.kind)} description={family ? `${t(family)} — ${t(family + "_h")}` : metaDesc} jsonld={jsonld}
+      noindex={!!(homeFiltered || f.q || f.clang || f.page > 1 || (f.sub && f.tag) || (f.target && (f.tag || f.sub)) || ((f.tag || f.target) && list.total < 2))}>
+  {family ? (
+    <section class="hero hero-sm">
+      <Breadcrumb lang={lang} t={t} items={[[t(family), familyPath(lang, family)]]} />
+      <h1>{t("h1_" + family)}</h1>
+      <p>{t(family + "_h")} : {famKinds.map((k) => t("k_" + k)).join(", ")}.</p>
+    </section>
+  ) : home ? (
+    <div class="hero-row">
+      <section class="hero">
+        {/* H1 : le slogan, puis une ligne de mots-clés (sans marque) pour le référencement */}
+        <h1>{t("hero_h")} <span class="h1-kw">{t("hero_kw")}</span></h1>
+        <p>{t("hero_p")}</p>
+      </section>
+      <Slider lang={lang} t={t} />
+    </div>
+  ) : (
+    <section class="hero hero-sm">
+      <Breadcrumb lang={lang} t={t} kind={f.kind} items={heading === t("k_" + f.kind) ? [[heading, kindPath(lang, f.kind)]] : [[t("k_" + f.kind), kindPath(lang, f.kind)], [heading, Astro.url.pathname]]} />
+      <h1>{h1}</h1>
+      <p>{t("d_" + f.kind)}</p>
+    </section>
+  )}
+
+  <nav class="kinds" id="kinds">
+    {KINDS.map((k) => (
+      <a class={`k-${k}`} href={kindPath(lang, k)}  aria-current={!home && f.kind === k ? "true" : "false"}>
+        {t("k_" + k)}<span class="n">{facets.kinds[k] || 0}</span>
+      </a>
+    ))}
+  </nav>
+
+  <div class="hub">
+    {home ? (
+    <aside class="filters">
+      {/* Accueil : liens vers les pages de famille, puis filtre par langue du contenu (liens hors robots : pages noindex) */}
+      <div class="group"><h3>{t("families")}</h3>
+        {FAMILIES.map(([fam]) => (
+          <a class="chip" href={familyPath(lang, fam)} aria-pressed={family === fam ? "true" : "false"}>{t(fam)}</a>
+        ))}
+      </div>
+      {Object.keys(facets.clangs).length > 0 && (
+        <div class="group"><h3>{t("f_clang")}</h3>
+          {Object.entries(facets.clangs).sort((a, b) => b[1] - a[1]).map(([c, n]) => (
+            <button type="button" class="chip" data-clang={c} aria-pressed="false">{clangName(lang, c)}<span class="n">{n}</span></button>
+          ))}
+        </div>
+      )}
+    </aside>
+    ) : (
+    <aside class="filters">
+      {!home && sf && (
+        <div class="group"><h3>{t(sf.label)}</h3>
+          <a class="chip" {...lk(link({ sub: "" }), !f.tag && !f.target)} aria-pressed={!f.sub ? "true" : "false"}>{t("all")}<span class="n">{facets.kinds[f.kind] || 0}</span></a>
+          {Object.entries(sf.opts).map(([k, l]) => (
+            <a class="chip" {...lk(link({ sub: f.sub === k ? "" : k }), !f.tag && !f.target)} aria-pressed={f.sub === k ? "true" : "false"}>{t(l)}<span class="n">{facets.subs[k] || 0}</span></a>
+          ))}
+        </div>
+      )}
+      {!home && Object.keys(facets.targets || {}).length > 0 && (
+        <div class="group"><h3>{t("f_target")}</h3>
+          {Object.keys(TARGET_FAMILIES).filter((m) => facets.targets[m]).map((m) => (
+            <a class="chip" {...lk(link({ target: f.target === m ? "" : m }), false)} aria-pressed={f.target === m ? "true" : "false"}>{targetName(t, m)}<span class="n">{facets.targets[m]}</span></a>
+          ))}
+        </div>
+      )}
+      {!home && Object.keys(facets.clangs).length > 0 && (
+        <div class="group"><h3>{t("f_clang")}</h3>
+          {Object.entries(facets.clangs).sort((a, b) => b[1] - a[1]).map(([c, n]) => (
+            <button type="button" class="chip" data-clang={c} aria-pressed="false">{clangName(lang, c)}<span class="n">{n}</span></button>
+          ))}
+        </div>
+      )}
+      {f.kind === "model" && <div class="group"><a class="btn sm" href={`${pre(lang)}/labs`}>{t("labs_title")} →</a></div>}
+      {!home && user.authenticated && (f.kind !== "model" || user.isLab || user.isAdmin) && <div class="group"><span class="btn sm" role="link" tabindex="0" data-o={b64(`/a2/new/${f.kind}`)}>{t("publish_in", { k: t("o_" + f.kind) })}</span></div>}
+    </aside>
+    )}
+
+    <section>
+      <form class="listhead" method="get" action={listPath(lang, { ...f, sort: "likes", page: 1 })}>
+        {f.q && <input type="hidden" name="q" value={f.q} />}
+        <span>{t("results", { n: list.total })}</span><span class="spacer"></span>
+      </form>
+
+      {list.items.length ? (
+        <div class="list">{list.items.map((it) => <Card it={it} lang={lang} t={t} />)}</div>
+      ) : (
+        <div class="empty">
+          {filtered ? t("no_results") : t("empty_kind")}
+          {user.authenticated && <Fragment><br /><br /><span class="btn primary" role="link" tabindex="0" data-o={b64(`/a2/new/${f.kind}`)}>{t("publish_in", { k: t("o_" + f.kind) })}</span></Fragment>}
+        </div>
+      )}
+
+      {pages > 1 && (
+        <nav class="pager">
+          {f.page > 1 && <a class="btn sm" rel="prev" href={link({ page: f.page - 1 })}>← {t("prev")}</a>}
+          <span>{t("page_n", { n: `${f.page} / ${pages}` })}</span>
+          {f.page < pages && <a class="btn sm" rel="next" href={link({ page: f.page + 1 })}>{t("next")} →</a>}
+        </nav>
+      )}
+    </section>
+  </div>
+</Base>

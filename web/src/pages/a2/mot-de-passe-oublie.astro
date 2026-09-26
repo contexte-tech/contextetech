@@ -1,0 +1,28 @@
+---
+// Mot de passe oublié : on saisit son adresse e-mail et on reçoit un lien de réinitialisation (valable 1 heure).
+import Base from "../../layouts/Base.astro";
+import { translator } from "../../lib/i18n.js";
+import { api, noCache, site } from "../../lib/server.js";
+
+const lang = "fr";
+const t = translator(lang, site().name);
+noCache(Astro);
+const user = await api(Astro, "/api/auth/me");
+const error = Astro.url.searchParams.get("error");
+const sent = Astro.url.searchParams.get("sent") === "1";
+---
+<Base lang={lang} path="/" user={user} title={t("forgot_title")} noindex={true} admin={true}>
+  <div class="authbox">
+    <h1>{t("forgot_title")}</h1>
+    {error && <p class="err" role="alert">{t("err_" + error)}</p>}
+    {sent ? <p class="okmsg" role="status">{t("forgot_sent")}</p> : (
+      <form method="post" action="/api/auth/forgot">
+        <input type="hidden" name="lang" value={lang} />
+        <p class="note">{t("forgot_p")}</p>
+        <div class="field"><label for="e">{t("email")}</label><input id="e" name="email" type="email" maxlength="254" autocomplete="email" required /></div>
+        <button class="btn primary" type="submit">{t("forgot_btn")}</button>
+      </form>
+    )}
+    <p class="note u-mt16"><a href="/a2/">{t("login")}</a></p>
+  </div>
+</Base>

@@ -1,0 +1,12 @@
+---
+import { pre } from "../lib/paths.js";
+import Base from "../layouts/Base.astro";
+import { DEFAULT_LANG, isLang, translator } from "../lib/i18n.js";
+import { site } from "../lib/server.js";
+const seg = Astro.url.pathname.split("/")[1];
+const lang = isLang(seg) ? seg : DEFAULT_LANG;
+const t = translator(lang, site().name);
+---
+<Base lang={lang} title={t("not_found_title")} noindex={true}>
+  <div class="detail"><div class="empty">{t("not_found")}<br /><br /><a class="btn" href={`${pre(lang)}/`}>{t("back")}</a></div></div>
+</Base>
