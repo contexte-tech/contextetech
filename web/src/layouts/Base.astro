@@ -65,7 +65,7 @@ Astro.response.headers.append("Link", PRELOAD_FONTS.map((u) => `<${S.origin}${u}
 </head>
 <body>
   <header class="top"><div class="wrap">
-    <a class="logo" href={`${pre(lang)}/`} aria-label={S.name}><span class="logo-brand"><span class="logo-mark">{"{ctx}"}</span><span class="logo-tech">tech</span></span><span class="logo-name">{S.name}</span></a>
+    <a class="logo" href={`${pre(lang)}/`} aria-label={S.name}><span class="logo-name">{S.name}</span></a>
     <span class="spacer"></span>
     {!admin && (
       <nav class="langs" aria-label="Langue / Language">
