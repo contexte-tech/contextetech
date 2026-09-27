@@ -17,6 +17,7 @@ mentions:()=>`<h2>Mentions légales</h2><p class="upd">Dernière mise à jour : 
 <h3>Directeur de la publication</h3><p>${L("directeur")}</p>
 <h3>Hébergement</h3><p>${esc(LEGAL.hebergeur)}</p>
 <h3>Contenus publiés par les membres</h3><p>Les ressources (contextes, prompts, datasets, configurations) sont publiées par les membres sous leur seule responsabilité. L'éditeur agit en qualité d'hébergeur de ces contenus au sens de l'article 6-I-2 de la LCEN et du règlement (UE) 2022/2065 sur les services numériques : il n'exerce pas de contrôle préalable mais retire promptement tout contenu manifestement illicite qui lui est signalé.</p>
+<h3>Source</h3><p>Ce service est basé sur le code de <a href="https://contextetech.com">ContexteTech</a> (licence AGPL-3.0).</p>
 <h3>Propriété intellectuelle</h3><p>La marque Contexthèque, ainsi que la structure, le code et la charte graphique du service, sont la propriété de l'éditeur. Les ressources restent la propriété de leurs auteurs et sont réutilisables selon la licence choisie par chacun.</p>
 <h3>Signalement</h3><p>Pour signaler un contenu illicite, écrivez à ${L("email")} en précisant l'identifiant de la ressource, le motif et, le cas échéant, les droits en cause. Voir aussi les <a href="#/legal/cgu">conditions générales d'utilisation</a>.</p>`,
 cgu:()=>`<h2>Conditions générales d'utilisation</h2><p class="upd">Dernière mise à jour : ${legalDate()}</p>
@@ -45,6 +46,7 @@ mentions:()=>`<h2>Legal notice</h2><p class="upd">Last updated: ${legalDate()}</
 <h3>Publication director</h3><p>${L("directeur")}</p>
 <h3>Hosting</h3><p>${esc(LEGAL.hebergeur)}</p>
 <h3>Content published by members</h3><p>Resources (contexts, prompts, datasets, configurations) are published by members under their sole responsibility. The publisher acts as a hosting provider for this content within the meaning of Article 6-I-2 of the LCEN and Regulation (EU) 2022/2065 (Digital Services Act): it does not review content beforehand but promptly removes any manifestly illegal content reported to it.</p>
+<h3>Source</h3><p>This service is based on the <a href="https://contextetech.com">ContexteTech</a> code (AGPL-3.0 licence).</p>
 <h3>Intellectual property</h3><p>The Contexthèque brand, and the structure, code and visual identity of the service, are the property of the publisher. Resources remain the property of their authors and may be reused under the license each author chooses.</p>
 <h3>Reporting</h3><p>To report illegal content, write to ${L("email")} stating the resource ID, the reason and, where applicable, the rights concerned. See also the <a href="#/legal/cgu">terms of use</a>.</p>`,
 cgu:()=>`<h2>Terms of use</h2><p class="upd">Last updated: ${legalDate()}</p>

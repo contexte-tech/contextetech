@@ -117,5 +117,5 @@ Les fiches publiées sur contextetech.com gardent chacune la licence choisie par
 
 ## Marques et logos / Trademarks
 
-Les noms ContexteTech et Contexthèque, les logos et les visuels ne sont pas couverts par l’AGPL-3.0 : voir [TRADEMARKS.md](TRADEMARKS.md).
-The ContexteTech and Contexthèque names, logos and visuals are not covered by the AGPL-3.0: see [TRADEMARKS.md](TRADEMARKS.md).
+Les noms ContexteTech et Contexthèque, les logos et les visuels ne sont pas couverts par l’AGPL-3.0 : voir [TRADEMARKS.md](TRADEMARKS.md). Toute réutilisation doit citer ContexteTech en source, avec un lien, dans ses mentions légales.
+The ContexteTech and Contexthèque names, logos and visuals are not covered by the AGPL-3.0: see [TRADEMARKS.md](TRADEMARKS.md). Any reuse must credit ContexteTech as the source, with a link, in its legal notice.
