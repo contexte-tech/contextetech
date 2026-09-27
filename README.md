@@ -1,4 +1,10 @@
-<p align="center"><img src="web/public/logo.png" alt="ContexteTech" width="390"></p>
+<p align="center"><img src="https://contextetech.com/logo.png" alt="ContexteTech" width="390"></p>
+
+<p align="center">
+<a href="https://www.bestpractices.dev/projects/14974"><img src="https://www.bestpractices.dev/projects/14974/badge" alt="OpenSSF Best Practices"></a>
+<a href="https://github.com/contexte-tech/contextetech/actions/workflows/ci.yml"><img src="https://github.com/contexte-tech/contextetech/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="AGPL-3.0"></a>
+</p>
 
 # ContexteTech
 
