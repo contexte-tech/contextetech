@@ -17,7 +17,8 @@ Le site est alors sur http://localhost:8088 (compte admin : celui de `.env`).
 2. Créez une branche à partir de `main`, une modification par *pull request*.
 3. Vérifiez avant d'envoyer :
    - `npx astro build` et `npx svelte-check` dans `web/` passent ;
-   - l'API démarre et `python -m py_compile` passe sur les fichiers modifiés ;
+   - dans `api/` : `ruff check .` et `pytest` passent (l'intégration continue les relance à chaque push) ;
+   - **toute nouvelle fonctionnalité importante est accompagnée de tests** dans `api/tests/` ;
    - les textes d'interface existent dans les **5 langues** (`web/src/lib/i18n.js` : fr, en, es, de, it).
 4. Décrivez ce que fait la modification et comment la tester.
 
