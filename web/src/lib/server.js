@@ -4,7 +4,7 @@ const API = process.env.API_INTERNAL_URL || "http://api:8000";
 export function site() {
   const e = process.env;
   return {
-    name: e.SITE_NAME || "Mon hub",   // votre propre nom : les noms et logos ContexteTech ne sont pas sous AGPL (TRADEMARKS.md)
+    name: e.SITE_NAME || "Mon nom",   // votre propre nom : les noms et logos ContexteTech ne sont pas sous AGPL (TRADEMARKS.md)
     origin: (e.PUBLIC_ORIGIN || "https://localhost").replace(/\/$/, ""),
     legal: {
       editeur: e.LEGAL_EDITEUR || "", forme: e.LEGAL_FORME || "", adresse: e.LEGAL_ADRESSE || "",
