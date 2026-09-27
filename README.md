@@ -114,3 +114,8 @@ licence le code de toute version modifiée, y compris quand elle est proposée e
 
 Les fiches publiées sur contextetech.com gardent chacune la licence choisie par leur auteur
 (indiquée sur la fiche) ; la licence AGPL-3.0 ne concerne que le logiciel.
+
+## Marques et logos / Trademarks
+
+Les noms ContexteTech et Contexthèque, les logos et les visuels ne sont pas couverts par l’AGPL-3.0 : voir [TRADEMARKS.md](TRADEMARKS.md).
+The ContexteTech and Contexthèque names, logos and visuals are not covered by the AGPL-3.0: see [TRADEMARKS.md](TRADEMARKS.md).

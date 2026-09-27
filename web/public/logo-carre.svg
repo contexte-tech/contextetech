@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ContexteTech">
-  <path d="M47 255 H465 V428 a37 37 0 0 1 -37 37 H84 a37 37 0 0 1 -37 -37 Z" fill="#FFFFFF" stroke="#0B7285" stroke-width="14"/>
-  <path d="M40 262 V84 a44 44 0 0 1 44 -44 H428 a44 44 0 0 1 44 44 V262 Z" fill="#0B7285"/>
-  <text x="256" y="190" font-family="JetBrains Mono,Menlo,Consolas,monospace" font-size="118" font-weight="700" fill="#FFFFFF" text-anchor="middle">{ctx}</text>
-  <text x="256" y="400" font-family="JetBrains Mono,Menlo,Consolas,monospace" font-size="118" font-weight="700" fill="#0B7285" text-anchor="middle">tech</text>
-</svg>
