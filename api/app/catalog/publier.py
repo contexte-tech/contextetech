@@ -1,6 +1,6 @@
 """Publie un fichier de catalogue (liste de fiches JSON) sur une instance ContexteTech, via l'API.
 
-    ORIGIN=https://contextetech.com ADMIN_USERNAME=… ADMIN_PASSWORD=… python3 publier.py catalogue-initial.json
+    ORIGIN=https://contextetech.com ADMIN_USERNAME=… ADMIN_PASSWORD=… python3 publier.py mon-catalogue.json
     VIDER=1 … : supprime d'abord toutes les fiches existantes (instance locale de démo uniquement)
 """
 import http.cookiejar, json, os, sys, urllib.parse, urllib.request
