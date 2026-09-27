@@ -1,3 +1,5 @@
+<p align="center"><img src="web/public/logo.png" alt="ContexteTech" width="390"></p>
+
 # ContexteTech
 
 Hub open source de ressources pour LLM, dans l'esprit de Hugging Face :
