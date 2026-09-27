@@ -1,5 +1,5 @@
 ---
-// Page « Open source » : les technologies qui font tourner le site, en texte (sans liens externes).
+// Page « Open source » : le code du site (lien vers le dépôt) et les technologies qui le font tourner.
 import Base from "../../layouts/Base.astro";
 import Breadcrumb from "../../components/Breadcrumb.astro";
 
@@ -58,6 +58,7 @@ const GROUPS = [
       <Breadcrumb lang={lang} t={t} items={[[t("os_title"), Astro.url.pathname]]} />
       <h1>{t("os_title")}</h1>
       <p class="os-lead">{t("os_intro")}</p>
+      <p class="os-lead">{t("os_code")} <a href="https://github.com/contexte-tech/contextetech" rel="noopener">github.com/contexte-tech/contextetech</a></p>
     </header>
 
     {GROUPS.map(([g, items]) => (
