@@ -8,78 +8,78 @@
 
 # ContexteTech
 
-Hub open source de ressources pour LLM, dans l'esprit de Hugging Face :
-**contextes** d'in-context learning, **prompts**, **datasets** de fine-tuning et
-**configs LoRA**. Publication, fork, test en direct avec streaming, export vers
-Axolotl / PEFT / 🤗 datasets. Interface en 5 langues (fr, en, es, de, it).
+Open-source hub of LLM resources, in the spirit of Hugging Face:
+**in-context learning contexts**, **prompts**, fine-tuning **datasets** and
+**LoRA configs**. Publish, fork, test live with streaming, export to
+Axolotl / PEFT / 🤗 datasets. Interface in 5 languages (fr, en, es, de, it).
 
 ## Architecture
 
 ```
             ┌──────────── Caddy (HTTPS, HTTP/3, compression) ────────────┐
             │  /api/*  ──►  api  : FastAPI async · Uvicorn               │
-            │  /*      ──►  web  : Astro SSR (HTML pur) + îlots Svelte   │
+            │  /*      ──►  web  : Astro SSR (plain HTML) + Svelte islands│
             └────────────────────────────────────────────────────────────┘
    api ──► PostgreSQL (Scaleway Managed Database, TLS)
-   api ──► Redis (sessions, cache des listes, limitation de débit)
-   api ──► Scaleway Object Storage (gros datasets, optionnel)
-   api ──► LLM du bac à sable : Anthropic ou API compatible OpenAI (Ollama, vLLM)
+   api ──► Redis (sessions, list cache, rate limiting)
+   api ──► Scaleway Object Storage (large datasets, optional)
+   api ──► Sandbox LLM: Anthropic or an OpenAI-compatible API (Ollama, vLLM)
 ```
 
-- **Rendu** : les pages sont servies en HTML par Astro, sans JavaScript sauf pour
-  les îlots interactifs (bac à sable, likes, formulaires). Les fiches sont
-  indexables, avec `hreflang`, données structurées schema.org et sitemap.
-- **Cache** : listes et facettes en Redis (30 s, invalidées à chaque écriture) ;
-  pages anonymes en `s-maxage=60` pour un CDN ; assets `/_astro/*` immuables.
-- **Streaming** : les réponses du bac à sable arrivent en SSE, mot par mot.
-- **Sécurité** : sessions en cookie `HttpOnly` + `SameSite=Lax`, vérification
-  d'origine sur toutes les écritures, mots de passe en Argon2.
+- **Rendering**: pages are served as HTML by Astro, with no JavaScript except for
+  interactive islands (sandbox, likes, forms). Resource pages are indexable, with
+  `hreflang`, schema.org structured data and a sitemap.
+- **Cache**: lists and facets in Redis (30 s, invalidated on every write);
+  anonymous pages with `s-maxage=60` for a CDN; `/_astro/*` assets immutable.
+- **Streaming**: sandbox answers arrive over SSE, word by word.
+- **Security**: sessions in an `HttpOnly` + `SameSite=Lax` cookie, origin check
+  on every write, Argon2 password hashing.
 
 ## Production
 
-contextetech.com tourne en conteneurs (API, site, Redis) derrière Caddy (TLS, HTTP/3)
-et le CDN Bunny, avec PostgreSQL managé chez Scaleway. La procédure propre à ce
-serveur n'est pas publiée ; `docker-compose.yml` et `deploy/Caddyfile` suffisent
-pour installer ContexteTech sur votre propre machine.
+contextetech.com runs in containers (API, site, Redis) behind Caddy (TLS, HTTP/3)
+and the Bunny CDN, with managed PostgreSQL at Scaleway. The procedure specific to
+this server is not published; `docker-compose.yml` and `deploy/Caddyfile` are
+enough to install ContexteTech on your own machine.
 
-## Démarrage (machine dédiée)
+## Getting started (dedicated machine)
 
 ```bash
-cp .env.example .env     # base Scaleway, domaine, clé API, mentions légales
+cp .env.example .env     # Scaleway database, domain, API key, legal notice
 docker compose up -d --build
 docker compose logs -f api web
 ```
 
-- Hub : `https://contextetech.com/` (redirige vers la langue du navigateur)
-- Documentation de l'API : `https://contextetech.com/api/docs`
+- Hub: `https://contextetech.com/en/` (English version; `https://contextetech.com/` redirects to the browser language)
+- API documentation: `https://contextetech.com/api/docs`
 
-### Base de données Scaleway
+### Scaleway database
 
-1. Managed Databases → instance PostgreSQL 16 → base `contextec` + utilisateur dédié.
-2. **Allowed IPs** : n'autoriser que l'IP du serveur Docker.
-3. Reporter l'endpoint (IP, port) et les identifiants dans `.env`.
-4. Activer les sauvegardes automatiques de l'instance.
+1. Managed Databases → PostgreSQL 16 instance → `contextec` database + dedicated user.
+2. **Allowed IPs**: only allow the Docker server's IP.
+3. Copy the endpoint (IP, port) and credentials into `.env`.
+4. Enable automatic backups for the instance.
 
-Les migrations Alembic s'appliquent au démarrage de `api`.
+Alembic migrations run when `api` starts.
 
-Test local sans Scaleway : `POSTGRES_HOST=db`, `POSTGRES_PORT=5432`,
-`POSTGRES_SSLMODE=disable`, `COOKIE_SECURE=0`, puis
+Local test without Scaleway: `POSTGRES_HOST=db`, `POSTGRES_PORT=5432`,
+`POSTGRES_SSLMODE=disable`, `COOKIE_SECURE=0`, then
 `docker compose --profile local-db up -d`.
 
-### Gros datasets
+### Large datasets
 
-Jusqu'à 256 Ko, un dataset est stocké en base. Au-delà (jusqu'à `MAX_DATASET_MB`),
-il part sur Scaleway Object Storage : créer un bucket privé et une clé API, puis
-renseigner `S3_*`. Le téléchargement passe par une URL pré-signée.
+Up to 256 KB, a dataset is stored in the database. Beyond that (up to `MAX_DATASET_MB`),
+it goes to Scaleway Object Storage: create a private bucket and an API key, then
+fill in `S3_*`. Downloads use a pre-signed URL.
 
-### Bac à sable
+### Sandbox
 
 | Mode | `.env` |
 |---|---|
 | Anthropic | `LLM_PROVIDER=anthropic` + `ANTHROPIC_API_KEY` |
-| Ollama sur GPU local | `LLM_PROVIDER=openai`, `LLM_BASE_URL=http://ollama:11434/v1`, `docker compose --profile ollama up -d`, puis `docker compose exec ollama ollama pull qwen2.5:7b-instruct` |
-| vLLM / autre | `LLM_PROVIDER=openai` + `LLM_BASE_URL` + `LLM_API_KEY` |
-| Désactivé | `LLM_PROVIDER=` |
+| Ollama on a local GPU | `LLM_PROVIDER=openai`, `LLM_BASE_URL=http://ollama:11434/v1`, `docker compose --profile ollama up -d`, then `docker compose exec ollama ollama pull qwen2.5:7b-instruct` |
+| vLLM / other | `LLM_PROVIDER=openai` + `LLM_BASE_URL` + `LLM_API_KEY` |
+| Disabled | `LLM_PROVIDER=` |
 
 ### Oracle Linux 9 / RHEL 9
 
@@ -91,7 +91,7 @@ sudo firewall-cmd --permanent --add-service=http --add-service=https --add-port=
 sudo firewall-cmd --reload
 ```
 
-## Développement
+## Development
 
 ```bash
 # API
@@ -104,24 +104,23 @@ cd web && npm install && API_INTERNAL_URL=http://localhost:8000 npm run dev
 ## Images
 
 ```bash
-IMAGE_PREFIX=ghcr.io/<compte> IMAGE_TAG=0.1.0 docker compose build
-IMAGE_PREFIX=ghcr.io/<compte> IMAGE_TAG=0.1.0 docker compose push api web
+IMAGE_PREFIX=ghcr.io/<account> IMAGE_TAG=0.1.0 docker compose build
+IMAGE_PREFIX=ghcr.io/<account> IMAGE_TAG=0.1.0 docker compose push api web
 ```
 
-## Licence
+## License
 
-À choisir avant publication, puis ajouter le fichier `LICENSE`.
+To be chosen before publication, then add the `LICENSE` file.
 
-## Licence
+## License
 
-Le code de ContexteTech est distribué sous licence **GNU AGPL-3.0** (voir [LICENSE](LICENSE)) :
-vous pouvez l'utiliser, le modifier et le redistribuer, à condition de publier sous la même
-licence le code de toute version modifiée, y compris quand elle est proposée en ligne.
+ContexteTech's code is distributed under the **GNU AGPL-3.0** license (see [LICENSE](LICENSE)):
+you may use, modify and redistribute it, provided that you publish the code of any
+modified version under the same license, including when it is offered online.
 
-Les fiches publiées sur contextetech.com gardent chacune la licence choisie par leur auteur
-(indiquée sur la fiche) ; la licence AGPL-3.0 ne concerne que le logiciel.
+Resources published on contextetech.com each keep the license chosen by their author
+(shown on the resource page); the AGPL-3.0 license only covers the software.
 
-## Marques et logos / Trademarks
+## Trademarks and logos
 
-Les noms ContexteTech et Contexthèque, les logos et les visuels ne sont pas couverts par l’AGPL-3.0 : voir [TRADEMARKS.md](TRADEMARKS.md). Toute réutilisation doit citer ContexteTech en source, avec un lien, dans ses mentions légales.
 The ContexteTech and Contexthèque names, logos and visuals are not covered by the AGPL-3.0: see [TRADEMARKS.md](TRADEMARKS.md). Any reuse must credit ContexteTech as the source, with a link, in its legal notice.
