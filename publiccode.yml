@@ -1,0 +1,133 @@
+publiccodeYmlVersion: "0"
+
+name: Contexte Tech
+url: "https://github.com/contexte-tech/contextetech"
+landingURL: "https://contextetech.com/en/"
+softwareVersion: "1.0.1"
+releaseDate: "2026-09-27"
+logo: "https://contextetech.com/logo.png"
+
+platforms:
+  - web
+
+categories:
+  - knowledge-management
+  - content-management
+  - compliance-management
+  - it-development
+
+developmentStatus: stable
+softwareType: "standalone/web"
+
+description:
+  en:
+    shortDescription: >-
+      Open catalogue of verified context for AI models: prompts, datasets,
+      evaluations and guardrails, with source and EU compliance.
+    longDescription: >-
+      Contexte Tech is a web platform to publish, version and share the
+      resources that adapt an AI language model to a real task: system
+      prompts and contexts, fine-tuning datasets, evaluations, guardrails,
+      agents and MCP server configurations.
+
+
+      Every resource states **where it comes from** (source and licence),
+      keeps **all its versions** (any version stays downloadable), shows
+      which models it was **tested on**, and documents its **compliance**
+      with the GDPR, copyright law and the EU AI Act (personal data,
+      training-data transparency, risk level).
+
+
+      Resources export directly to the format of the target tool (JSONL for
+      datasets, SKILL.md, CLAUDE.md, MCP configuration blocks). The interface
+      is available in five languages (French, English, Spanish, German and
+      Italian) and the platform can be self-hosted with Docker Compose
+      (PostgreSQL, Redis, Caddy). No advertising cookies; audience
+      measurement is optional and cookieless.
+
+
+      Public administrations can use it to share and audit the prompts,
+      guardrails and evaluation sets of their AI assistants, and to publish
+      training data built on their open data with its source attached.
+    documentation: "https://contextetech.com/en/docs"
+    apiDocumentation: "https://contextetech.com/api/docs"
+    features:
+      - Publish and version prompts, contexts, datasets, evaluations and guardrails
+      - Source, licence and full version history for every resource
+      - Compliance tab for GDPR, copyright and the EU AI Act
+      - Results of tests on different AI models
+      - Export to the format of the target tool (JSONL, SKILL.md, CLAUDE.md, MCP)
+      - Lineage between resources (forks and derived versions)
+      - Public statistics of views and downloads
+      - Interface in five European languages
+      - Self-hostable with Docker Compose
+  it:
+    shortDescription: >-
+      Catalogo aperto di contesto verificato per modelli di IA: prompt,
+      dataset, valutazioni e guardrail, con fonte e conformità UE.
+    longDescription: >-
+      Contexte Tech è una piattaforma web per pubblicare, versionare e
+      condividere le risorse che adattano un modello linguistico di IA a un
+      compito reale: prompt di sistema e contesti, dataset per il
+      fine-tuning, valutazioni, guardrail, agenti e configurazioni di server
+      MCP.
+
+
+      Ogni risorsa indica **da dove proviene** (fonte e licenza), conserva
+      **tutte le sue versioni** (ogni versione resta scaricabile), mostra su
+      quali modelli è stata **testata** e documenta la sua **conformità** al
+      GDPR, al diritto d'autore e all'AI Act europeo (dati personali,
+      trasparenza dei dati di addestramento, livello di rischio).
+
+
+      Le risorse si esportano direttamente nel formato dello strumento di
+      destinazione (JSONL per i dataset, SKILL.md, CLAUDE.md, blocchi di
+      configurazione MCP). L'interfaccia è disponibile in cinque lingue
+      (francese, inglese, spagnolo, tedesco e italiano) e la piattaforma può
+      essere installata in autonomia con Docker Compose (PostgreSQL, Redis,
+      Caddy). Nessun cookie pubblicitario; la misurazione del pubblico è
+      facoltativa e senza cookie.
+
+
+      Le pubbliche amministrazioni possono usarla per condividere e
+      verificare i prompt, i guardrail e i set di valutazione dei loro
+      assistenti di IA, e per pubblicare dati di addestramento costruiti sui
+      propri open data con la fonte indicata.
+    documentation: "https://contextetech.com/it/docs"
+    apiDocumentation: "https://contextetech.com/api/docs"
+    features:
+      - Pubblicazione e versionamento di prompt, contesti, dataset, valutazioni e guardrail
+      - Fonte, licenza e cronologia completa delle versioni per ogni risorsa
+      - Scheda di conformità per GDPR, diritto d'autore e AI Act
+      - Risultati dei test su diversi modelli di IA
+      - Esportazione nel formato dello strumento di destinazione (JSONL, SKILL.md, CLAUDE.md, MCP)
+      - Discendenza tra le risorse (fork e versioni derivate)
+      - Statistiche pubbliche di visualizzazioni e download
+      - Interfaccia in cinque lingue europee
+      - Installabile in autonomia con Docker Compose
+
+legal:
+  license: AGPL-3.0-only
+
+maintenance:
+  type: internal
+  contacts:
+    - name: Tony Belnoue
+      email: coucou@contextetech.com
+      affiliation: Contexte Tech
+
+localisation:
+  localisationReady: true
+  availableLanguages:
+    - fr
+    - en
+    - es
+    - de
+    - it
+
+dependsOn:
+  open:
+    - name: PostgreSQL
+      versionMin: "16"
+    - name: Redis
+      versionMin: "7"
